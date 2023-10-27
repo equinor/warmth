@@ -46,7 +46,13 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Background theory</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Background theory</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#pre-requisite-grid-of-1d-node-simulation">Pre-requisite: grid of 1D node simulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#d-heat-equation-simulation-using-dolfinx">3D heat equation simulation using dolfinx</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#resqml-output">RESQML output</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#d-dependencies">3D dependencies</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="example.html">Example</a></li>
 <li class="toctree-l1"><a class="reference internal" href="apireference.html">API Reference</a></li>
 </ul>
@@ -77,6 +83,24 @@
              
   <section id="background-theory">
 <h1>Background theory<a class="headerlink" href="#background-theory" title="Link to this heading"></a></h1>
+<p>3D simulations in temperer are under active development. Currently, yhey are based on a uniform reactangular grid of 1D nodes (defined in a NodeGrid data structure). The sediment inputs, horizons are present day, are provided as .gri files, which are read into a SedimentStack class.</p>
+<section id="pre-requisite-grid-of-1d-node-simulation">
+<h2>Pre-requisite: grid of 1D node simulation<a class="headerlink" href="#pre-requisite-grid-of-1d-node-simulation" title="Link to this heading"></a></h2>
+<p>The complete 1D temperer simulation is run for some of the 1D nodes. For other 1D nodes the subsidence, beta factor, and crustal thickness are interpolated. The 1D simulations can be run using the script <a class="reference internal" href="#temperer3D/parallel-1Dsed.py"><span class="xref myst">parallel-1Dsed.py</span></a>.  Results for each node are pickled to a separate file (this is to be improved!).</p>
+</section>
+<section id="d-heat-equation-simulation-using-dolfinx">
+<h2>3D heat equation simulation using dolfinx<a class="headerlink" href="#d-heat-equation-simulation-using-dolfinx" title="Link to this heading"></a></h2>
+<p>The 3D simulation performs a series of heat equation solves, regularly updating the mesh positions from the 1D nodes. The equations are solved using the PETSc solver from the dolfinx package (part of the FeNiCs project). The compute mesh is built by defining hexahedra for every rectangle of 1D nodes and for every layer (i.e. each sediment, the crust, the lithosphere, and the aesthenosphere), which are then subdivided into tetrahedra.</p>
+<p>The dolfinx model building and solving is managed by the class <a class="reference internal" href="#temperer3D/fixed_mesh_model.py"><span class="xref myst">UniformNodeGridFixedSizeMeshModel</span></a>.  The use of this class is demonstrated in <a class="reference internal" href="#tests/temperer3D_mapA_example.py"><span class="xref myst">temperer3D_mapA_example.py</span></a>. Note that the NodeGrid class definition in this script should match the definition used in <a class="reference internal" href="#temperer3D/parallel-1Dsed.py"><span class="xref myst">parallel-1Dsed.py</span></a> to compute the 1D solutions. This script writes the results (mesh positions and function values) at every 1M years in xdmf format for visualization in ParaView.</p>
+</section>
+<section id="resqml-output">
+<h2>RESQML output<a class="headerlink" href="#resqml-output" title="Link to this heading"></a></h2>
+<p>The test script <a class="reference internal" href="#tests/temperer3D_mapA_example.py"><span class="xref myst">temperer3D_mapA_example.py</span></a> further demonstrates writing the unstructured grid (with properties) in RESQML format, as a pair of .epc and .h5 files.  The RESQML I/O functions are in a separate file, <a class="reference internal" href="#temperer3D/resqpy_helpers.py"><span class="xref myst">resqpy_helpers.py</span></a>, and require a modified version of the resqpy library.  To visualise RESQML data in ParaView, a 3rd-party plug-in can be installed, see <a class="reference external" href="https://github.com/F2I-Consulting/fespp">fespp</a>.</p>
+</section>
+<section id="d-dependencies">
+<h2>3D dependencies<a class="headerlink" href="#d-dependencies" title="Link to this heading"></a></h2>
+<p>The dolfinx package is Linux-only(?) and has to be compiled from source or installed using apt-get.  The resqpy dependency can be installed with pip, but, for now, some writing of properties on unstructured grids requires a change in resqpy that is not yet merged.  The other dependencies xtgeo and meshio can be installed using pip (requirements file is to be added).</p>
+</section>
 </section>
 
 

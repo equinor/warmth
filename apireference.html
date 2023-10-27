@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Reference &mdash; temperer  documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=9eb32ce0"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@^1.0.1/dist/embed-amd.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Build 1D model" href="notebooks/Build_within_Python.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            temperer
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="theory.html">Background theory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example.html">Example</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-temperer.model">Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#temperer.model.Model"><code class="docutils literal notranslate"><span class="pre">Model</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.model.Model.parameters"><code class="docutils literal notranslate"><span class="pre">Model.parameters</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.model.Model.builder"><code class="docutils literal notranslate"><span class="pre">Model.builder</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.model.Model.simulator"><code class="docutils literal notranslate"><span class="pre">Model.simulator</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.model.Model.load"><code class="docutils literal notranslate"><span class="pre">Model.load()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-temperer.build">Model builder</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#temperer.build.single_node"><code class="docutils literal notranslate"><span class="pre">single_node</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.hc"><code class="docutils literal notranslate"><span class="pre">single_node.hc</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.hLith"><code class="docutils literal notranslate"><span class="pre">single_node.hLith</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.kCrust"><code class="docutils literal notranslate"><span class="pre">single_node.kCrust</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.kLith"><code class="docutils literal notranslate"><span class="pre">single_node.kLith</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.kAsth"><code class="docutils literal notranslate"><span class="pre">single_node.kAsth</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.rhp"><code class="docutils literal notranslate"><span class="pre">single_node.rhp</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.crustsolid"><code class="docutils literal notranslate"><span class="pre">single_node.crustsolid</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.lithsolid"><code class="docutils literal notranslate"><span class="pre">single_node.lithsolid</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.asthsolid"><code class="docutils literal notranslate"><span class="pre">single_node.asthsolid</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.T0"><code class="docutils literal notranslate"><span class="pre">single_node.T0</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.Tm"><code class="docutils literal notranslate"><span class="pre">single_node.Tm</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.qbase"><code class="docutils literal notranslate"><span class="pre">single_node.qbase</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.sediments_inputs"><code class="docutils literal notranslate"><span class="pre">single_node.sediments_inputs</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.X"><code class="docutils literal notranslate"><span class="pre">single_node.X</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.Y"><code class="docutils literal notranslate"><span class="pre">single_node.Y</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.paleoWD"><code class="docutils literal notranslate"><span class="pre">single_node.paleoWD</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.rift"><code class="docutils literal notranslate"><span class="pre">single_node.rift</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.water_depth_difference"><code class="docutils literal notranslate"><span class="pre">single_node.water_depth_difference</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.sediment_fill_margin"><code class="docutils literal notranslate"><span class="pre">single_node.sediment_fill_margin</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.total_beta_tested"><code class="docutils literal notranslate"><span class="pre">single_node.total_beta_tested</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.error"><code class="docutils literal notranslate"><span class="pre">single_node.error</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.simulated_at"><code class="docutils literal notranslate"><span class="pre">single_node.simulated_at</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.result"><code class="docutils literal notranslate"><span class="pre">single_node.result</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.fitting"><code class="docutils literal notranslate"><span class="pre">single_node.fitting</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.single_node.sediments"><code class="docutils literal notranslate"><span class="pre">single_node.sediments</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#temperer.build.Grid"><code class="docutils literal notranslate"><span class="pre">Grid</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.Grid.location_grid"><code class="docutils literal notranslate"><span class="pre">Grid.location_grid</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.Grid.make_grid_arr"><code class="docutils literal notranslate"><span class="pre">Grid.make_grid_arr()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.Grid.indexing_arr"><code class="docutils literal notranslate"><span class="pre">Grid.indexing_arr</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.Grid.dump"><code class="docutils literal notranslate"><span class="pre">Grid.dump()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#temperer.build.Builder"><code class="docutils literal notranslate"><span class="pre">Builder</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.Builder.single_node_sediments_inputs_template"><code class="docutils literal notranslate"><span class="pre">Builder.single_node_sediments_inputs_template</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.Builder.input_horizons_template"><code class="docutils literal notranslate"><span class="pre">Builder.input_horizons_template</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.Builder.extract_nodes"><code class="docutils literal notranslate"><span class="pre">Builder.extract_nodes()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.Builder.define_geometry"><code class="docutils literal notranslate"><span class="pre">Builder.define_geometry()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.Builder.locations"><code class="docutils literal notranslate"><span class="pre">Builder.locations</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.Builder.iter_node"><code class="docutils literal notranslate"><span class="pre">Builder.iter_node()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.build.Builder.set_eustatic_sea_level"><code class="docutils literal notranslate"><span class="pre">Builder.set_eustatic_sea_level()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-temperer.parameters">Parameters</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#temperer.parameters.Parameters"><code class="docutils literal notranslate"><span class="pre">Parameters</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.parameters.Parameters.initial_hLith_max"><code class="docutils literal notranslate"><span class="pre">Parameters.initial_hLith_max</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.parameters.Parameters.initial_hLith_min"><code class="docutils literal notranslate"><span class="pre">Parameters.initial_hLith_min</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.parameters.Parameters.time_start"><code class="docutils literal notranslate"><span class="pre">Parameters.time_start</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.parameters.Parameters.time_end"><code class="docutils literal notranslate"><span class="pre">Parameters.time_end</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.parameters.Parameters.positive_down"><code class="docutils literal notranslate"><span class="pre">Parameters.positive_down</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.parameters.Parameters.time_step_Ma"><code class="docutils literal notranslate"><span class="pre">Parameters.time_step_Ma</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-temperer.forward_modelling">Forward model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#temperer.forward_modelling.Forward_model"><code class="docutils literal notranslate"><span class="pre">Forward_model</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.forward_modelling.Forward_model.simulate_single_node"><code class="docutils literal notranslate"><span class="pre">Forward_model.simulate_single_node()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.forward_modelling.Forward_model.simulate_continental"><code class="docutils literal notranslate"><span class="pre">Forward_model.simulate_continental()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.forward_modelling.Forward_model.compaction"><code class="docutils literal notranslate"><span class="pre">Forward_model.compaction()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.forward_modelling.Forward_model.decompaction"><code class="docutils literal notranslate"><span class="pre">Forward_model.decompaction()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.forward_modelling.Forward_model.add_sediments"><code class="docutils literal notranslate"><span class="pre">Forward_model.add_sediments()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.forward_modelling.Forward_model.calculate_new_temperature"><code class="docutils literal notranslate"><span class="pre">Forward_model.calculate_new_temperature()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.forward_modelling.Forward_model.implicit_euler_solve"><code class="docutils literal notranslate"><span class="pre">Forward_model.implicit_euler_solve()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-temperer.simulator">Simulator</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#temperer.simulator.Simulator"><code class="docutils literal notranslate"><span class="pre">Simulator</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-temperer.postprocessing">Results</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#temperer.postprocessing.Results"><code class="docutils literal notranslate"><span class="pre">Results</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.postprocessing.Results.resultValues"><code class="docutils literal notranslate"><span class="pre">Results.resultValues</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.postprocessing.Results.ages"><code class="docutils literal notranslate"><span class="pre">Results.ages</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.postprocessing.Results.top_crust"><code class="docutils literal notranslate"><span class="pre">Results.top_crust()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.postprocessing.Results.top_lithosphere"><code class="docutils literal notranslate"><span class="pre">Results.top_lithosphere()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.postprocessing.Results.top_asthenosphere"><code class="docutils literal notranslate"><span class="pre">Results.top_asthenosphere()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.postprocessing.Results.crust_thickness"><code class="docutils literal notranslate"><span class="pre">Results.crust_thickness()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.postprocessing.Results.lithosphere_thickness"><code class="docutils literal notranslate"><span class="pre">Results.lithosphere_thickness()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.postprocessing.Results.depth"><code class="docutils literal notranslate"><span class="pre">Results.depth()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.postprocessing.Results.temperature"><code class="docutils literal notranslate"><span class="pre">Results.temperature()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.postprocessing.Results.sediment_ids"><code class="docutils literal notranslate"><span class="pre">Results.sediment_ids()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.postprocessing.Results.sediment_porosity"><code class="docutils literal notranslate"><span class="pre">Results.sediment_porosity()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.postprocessing.Results.effective_conductivity"><code class="docutils literal notranslate"><span class="pre">Results.effective_conductivity()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.postprocessing.Results.heatflow"><code class="docutils literal notranslate"><span class="pre">Results.heatflow()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#temperer.postprocessing.Results.basement_heatflow"><code class="docutils literal notranslate"><span class="pre">Results.basement_heatflow()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">temperer</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">API Reference</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/apireference.rst" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="api-reference">
+<h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading"></a></h1>
+<section id="module-temperer.model">
+<span id="model"></span><h2>Model<a class="headerlink" href="#module-temperer.model" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="temperer.model.Model">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">temperer.model.</span></span><span class="sig-name descname"><span class="pre">Model</span></span><a class="headerlink" href="#temperer.model.Model" title="Link to this definition"></a></dt>
+<dd><p>Main model class</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="temperer.model.Model.parameters">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">parameters</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#temperer.parameters.Parameters" title="temperer.parameters.Parameters"><span class="pre">Parameters</span></a></em><a class="headerlink" href="#temperer.model.Model.parameters" title="Link to this definition"></a></dt>
+<dd><p>Model parameters</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Model parameters</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#temperer.parameters.Parameters" title="temperer.parameters.Parameters">Parameters</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="temperer.model.Model.builder">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">builder</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#temperer.build.Builder" title="temperer.build.Builder"><span class="pre">Builder</span></a></em><a class="headerlink" href="#temperer.model.Model.builder" title="Link to this definition"></a></dt>
+<dd><p>Model builder</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Model builder</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#temperer.build.Builder" title="temperer.build.Builder">Builder</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="temperer.model.Model.simulator">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">simulator</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#temperer.simulator.Simulator" title="temperer.simulator.Simulator"><span class="pre">Simulator</span></a></em><a class="headerlink" href="#temperer.model.Model.simulator" title="Link to this definition"></a></dt>
+<dd><p>Model simulator</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Model simulator</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#temperer.simulator.Simulator" title="temperer.simulator.Simulator">Simulator</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.model.Model.load">
+<span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#temperer.model.Model.load" title="Link to this definition"></a></dt>
+<dd><p>Load model and override current model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>Path</em><em> | </em><em>str</em>) – path to model data</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-temperer.build">
+<span id="model-builder"></span><h2>Model builder<a class="headerlink" href="#module-temperer.build" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="temperer.build.single_node">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">temperer.build.</span></span><span class="sig-name descname"><span class="pre">single_node</span></span><a class="headerlink" href="#temperer.build.single_node" title="Link to this definition"></a></dt>
+<dd><p>Properties of 1D location for forward model</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.hc">
+<span class="sig-name descname"><span class="pre">hc</span></span><a class="headerlink" href="#temperer.build.single_node.hc" title="Link to this definition"></a></dt>
+<dd><p>Initial crustal thickness (m)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.hLith">
+<span class="sig-name descname"><span class="pre">hLith</span></span><a class="headerlink" href="#temperer.build.single_node.hLith" title="Link to this definition"></a></dt>
+<dd><p>Initial depth of base lithosphere (Thermal Lithosphere-Asthenosphere boundary) (m)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.kCrust">
+<span class="sig-name descname"><span class="pre">kCrust</span></span><a class="headerlink" href="#temperer.build.single_node.kCrust" title="Link to this definition"></a></dt>
+<dd><p>Reference conductivity of crust at 20C (W/K.m^2)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.kLith">
+<span class="sig-name descname"><span class="pre">kLith</span></span><a class="headerlink" href="#temperer.build.single_node.kLith" title="Link to this definition"></a></dt>
+<dd><p>Reference conductivity of lithospheric mantle at 20C (W/K.m^2)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.kAsth">
+<span class="sig-name descname"><span class="pre">kAsth</span></span><a class="headerlink" href="#temperer.build.single_node.kAsth" title="Link to this definition"></a></dt>
+<dd><p>Reference conductivity of asthenosphere at 20C (W/K.m^2)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.rhp">
+<span class="sig-name descname"><span class="pre">rhp</span></span><a class="headerlink" href="#temperer.build.single_node.rhp" title="Link to this definition"></a></dt>
+<dd><p>Radiogenic heat production of the crust (W/m^3)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.crustsolid">
+<span class="sig-name descname"><span class="pre">crustsolid</span></span><a class="headerlink" href="#temperer.build.single_node.crustsolid" title="Link to this definition"></a></dt>
+<dd><p>Density of the crust</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.lithsolid">
+<span class="sig-name descname"><span class="pre">lithsolid</span></span><a class="headerlink" href="#temperer.build.single_node.lithsolid" title="Link to this definition"></a></dt>
+<dd><p>Density of the lithospheric mantle</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.asthsolid">
+<span class="sig-name descname"><span class="pre">asthsolid</span></span><a class="headerlink" href="#temperer.build.single_node.asthsolid" title="Link to this definition"></a></dt>
+<dd><p>Density of th asthenosphere</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.T0">
+<span class="sig-name descname"><span class="pre">T0</span></span><a class="headerlink" href="#temperer.build.single_node.T0" title="Link to this definition"></a></dt>
+<dd><p>Seabed temperature (C)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.Tm">
+<span class="sig-name descname"><span class="pre">Tm</span></span><a class="headerlink" href="#temperer.build.single_node.Tm" title="Link to this definition"></a></dt>
+<dd><p>Temperature at the Lithosphere-Asthenosphere boundary (LAB) (m)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.qbase">
+<span class="sig-name descname"><span class="pre">qbase</span></span><a class="headerlink" href="#temperer.build.single_node.qbase" title="Link to this definition"></a></dt>
+<dd><p>Heat flow at the base of the crust (Moho) (W/m^2)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.sediments_inputs">
+<span class="sig-name descname"><span class="pre">sediments_inputs</span></span><a class="headerlink" href="#temperer.build.single_node.sediments_inputs" title="Link to this definition"></a></dt>
+<dd><p>Present-day sediments. See Builder.single_node_sediments_inputs_template</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.X">
+<span class="sig-name descname"><span class="pre">X</span></span><a class="headerlink" href="#temperer.build.single_node.X" title="Link to this definition"></a></dt>
+<dd><p>X location of the node</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.Y">
+<span class="sig-name descname"><span class="pre">Y</span></span><a class="headerlink" href="#temperer.build.single_node.Y" title="Link to this definition"></a></dt>
+<dd><p>Y location of the node</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.paleoWD">
+<span class="sig-name descname"><span class="pre">paleoWD</span></span><a class="headerlink" href="#temperer.build.single_node.paleoWD" title="Link to this definition"></a></dt>
+<dd><p>Paleo-water depth for multi-rift</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray[np.float64]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.rift">
+<span class="sig-name descname"><span class="pre">rift</span></span><a class="headerlink" href="#temperer.build.single_node.rift" title="Link to this definition"></a></dt>
+<dd><p>Rifting episodes</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List[List[int]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.water_depth_difference">
+<span class="sig-name descname"><span class="pre">water_depth_difference</span></span><a class="headerlink" href="#temperer.build.single_node.water_depth_difference" title="Link to this definition"></a></dt>
+<dd><p>Difference between forward model and observed present-day water depth</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.sediment_fill_margin">
+<span class="sig-name descname"><span class="pre">sediment_fill_margin</span></span><a class="headerlink" href="#temperer.build.single_node.sediment_fill_margin" title="Link to this definition"></a></dt>
+<dd><p>Maximum difference between modelled and observed present-day water depth when a fit is considered achieved</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.total_beta_tested">
+<span class="sig-name descname"><span class="pre">total_beta_tested</span></span><a class="headerlink" href="#temperer.build.single_node.total_beta_tested" title="Link to this definition"></a></dt>
+<dd><p>Total number of beta factors tested in forward model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.error">
+<span class="sig-name descname"><span class="pre">error</span></span><a class="headerlink" href="#temperer.build.single_node.error" title="Link to this definition"></a></dt>
+<dd><p>Error from forward model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="temperer.build.single_node.simulated_at">
+<span class="sig-name descname"><span class="pre">simulated_at</span></span><a class="headerlink" href="#temperer.build.single_node.simulated_at" title="Link to this definition"></a></dt>
+<dd><p>Timestamp when forward model is finished</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="temperer.build.single_node.result">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">result</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#temperer.postprocessing.Results" title="temperer.postprocessing.Results"><span class="pre">Results</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#temperer.build.single_node.result" title="Link to this definition"></a></dt>
+<dd><p>Results of 1D simulation</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None if not simulated</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#temperer.postprocessing.Results" title="temperer.postprocessing.Results">Results</a>|None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="temperer.build.single_node.fitting">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">fitting</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#temperer.build.single_node.fitting" title="Link to this definition"></a></dt>
+<dd><p>Whether a beta factor is found</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if the modelled water depth difference is smaller than the acceptable difference</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="temperer.build.single_node.sediments">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sediments</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">DataFrame</span></em><a class="headerlink" href="#temperer.build.single_node.sediments" title="Link to this definition"></a></dt>
+<dd><p>Cleaned-up sediments for the 1D location</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Sediment input</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="temperer.build.Grid">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">temperer.build.</span></span><span class="sig-name descname"><span class="pre">Grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">origin_x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">origin_y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_nodes_x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_nodes_y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step_x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step_y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#temperer.build.Grid" title="Link to this definition"></a></dt>
+<dd><p>Defines geometry of a 3D model</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="temperer.build.Grid.location_grid">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">location_grid</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></em><a class="headerlink" href="#temperer.build.Grid.location_grid" title="Link to this definition"></a></dt>
+<dd><p>Locations of all 1D nodes</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A 2D array of locations of all nodes</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.build.Grid.make_grid_arr">
+<span class="sig-name descname"><span class="pre">make_grid_arr</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#temperer.build.Grid.make_grid_arr" title="Link to this definition"></a></dt>
+<dd><p>list of list defining model geometry</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Template geometry to store 1D node object</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>List[List]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="temperer.build.Grid.indexing_arr">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">indexing_arr</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></em><a class="headerlink" href="#temperer.build.Grid.indexing_arr" title="Link to this definition"></a></dt>
+<dd><p>Array of indices of all 1D node object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Arry of indices</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.build.Grid.dump">
+<span class="sig-name descname"><span class="pre">dump</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#temperer.build.Grid.dump" title="Link to this definition"></a></dt>
+<dd><p>Save the object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>filepath</strong> (<em>Path</em>) – File path to save</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="temperer.build.Builder">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">temperer.build.</span></span><span class="sig-name descname"><span class="pre">Builder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parameters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#temperer.parameters.Parameters" title="temperer.parameters.Parameters"><span class="pre">Parameters</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#temperer.build.Builder" title="Link to this definition"></a></dt>
+<dd><p>Utilities to build a model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>parameters</strong> (<a class="reference internal" href="#temperer.parameters.Parameters" title="temperer.parameters.Parameters"><em>Parameters</em></a>) – Model parameters</p>
+</dd>
+</dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="temperer.build.Builder.single_node_sediments_inputs_template">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">single_node_sediments_inputs_template</span></span><a class="headerlink" href="#temperer.build.Builder.single_node_sediments_inputs_template" title="Link to this definition"></a></dt>
+<dd><p>Template for creating sediment for single node</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Single node sediment template</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>pd.Dataframe</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="temperer.build.Builder.input_horizons_template">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">input_horizons_template</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">DataFrame</span></em><a class="headerlink" href="#temperer.build.Builder.input_horizons_template" title="Link to this definition"></a></dt>
+<dd><p>Template dataframe for model input using maps</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Emtpy dataframe for appending input data</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.build.Builder.extract_nodes">
+<span class="sig-name descname"><span class="pre">extract_nodes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">thread</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">formatfile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'irap_binary'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">facies_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#temperer.build.Builder.extract_nodes" title="Link to this definition"></a></dt>
+<dd><p>Extract model nodes from input data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>thread</strong> (<em>int</em>) – Number of concurrent process</p></li>
+<li><p><strong>path</strong> (<em>Path</em>) – Path to map directory</p></li>
+<li><p><strong>formatfile</strong> (<em>str</em><em>, </em><em>optional</em>) – Map format supported by xtgeo, by default “irap_binary”</p></li>
+<li><p><strong>facies_dict</strong> (<em>dict</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Lithology value mapping with facies map, by default None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>ValueError</strong> – Invalid input table. Check self.input_horizons</p></li>
+<li><p><strong>ValueError</strong> – self.input_horizons not sorted with ascending age</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.build.Builder.define_geometry">
+<span class="sig-name descname"><span class="pre">define_geometry</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xinc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">yinc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fformat</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'irap_binary'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#temperer.build.Builder.define_geometry" title="Link to this definition"></a></dt>
+<dd><p>Define geometry of a 3D model by using a map</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>Path</em>) – Path to the map used in defining model geometry</p></li>
+<li><p><strong>xinc</strong> (<em>float</em><em>, </em><em>optional</em>) – Overwrite node distance in x direction from input map, by default None</p></li>
+<li><p><strong>yinc</strong> (<em>float</em><em>, </em><em>optional</em>) – Overwrite node distance in y direction from input map, by default None</p></li>
+<li><p><strong>fformat</strong> (<em>str</em><em>, </em><em>optional</em>) – Map format supported by xtgeo, by default “irap_binary”</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="temperer.build.Builder.locations">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">locations</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></em><a class="headerlink" href="#temperer.build.Builder.locations" title="Link to this definition"></a></dt>
+<dd><p>Locations of all 1D nodes</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A 2D array of locations of all nodes</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.build.Builder.iter_node">
+<span class="sig-name descname"><span class="pre">iter_node</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#temperer.build.single_node" title="temperer.build.single_node"><span class="pre">single_node</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#temperer.build.Builder.iter_node" title="Link to this definition"></a></dt>
+<dd><p>Iterate all 1D nodes</p>
+<dl class="field-list simple">
+<dt class="field-odd">Yields<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>Iterator[single_node]</em> – 1D node</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.build.Builder.set_eustatic_sea_level">
+<span class="sig-name descname"><span class="pre">set_eustatic_sea_level</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sealevel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#temperer.build.Builder.set_eustatic_sea_level" title="Link to this definition"></a></dt>
+<dd><p>Set eustatic sea level correction for subsidence modelling</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>sealevel</strong> (<em>dict</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Eustatic sea level data, by default None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-temperer.parameters">
+<span id="parameters"></span><h2>Parameters<a class="headerlink" href="#module-temperer.parameters" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="temperer.parameters.Parameters">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">temperer.parameters.</span></span><span class="sig-name descname"><span class="pre">Parameters</span></span><a class="headerlink" href="#temperer.parameters.Parameters" title="Link to this definition"></a></dt>
+<dd><p>Parameters of the model</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="temperer.parameters.Parameters.initial_hLith_max">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initial_hLith_max</span></span><a class="headerlink" href="#temperer.parameters.Parameters.initial_hLith_max" title="Link to this definition"></a></dt>
+<dd><p>Maximum allowed lithosphere thickness for crustal thickness calibration</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="temperer.parameters.Parameters.initial_hLith_min">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initial_hLith_min</span></span><a class="headerlink" href="#temperer.parameters.Parameters.initial_hLith_min" title="Link to this definition"></a></dt>
+<dd><p>Minimum allowed lithosphere thickness for crustal thickness calibration</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="temperer.parameters.Parameters.time_start">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">time_start</span></span><a class="headerlink" href="#temperer.parameters.Parameters.time_start" title="Link to this definition"></a></dt>
+<dd><p>Start age of the model in Ma</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Start age of model</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="temperer.parameters.Parameters.time_end">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">time_end</span></span><a class="headerlink" href="#temperer.parameters.Parameters.time_end" title="Link to this definition"></a></dt>
+<dd><p>End age of the model in Ma</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>End age of model</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="temperer.parameters.Parameters.positive_down">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">positive_down</span></span><a class="headerlink" href="#temperer.parameters.Parameters.positive_down" title="Link to this definition"></a></dt>
+<dd><p>Depth values are positive downwards</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if positve downwards</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="temperer.parameters.Parameters.time_step_Ma">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">time_step_Ma</span></span><a class="headerlink" href="#temperer.parameters.Parameters.time_step_Ma" title="Link to this definition"></a></dt>
+<dd><p>Time step to solve</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Time step</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>-1</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-temperer.forward_modelling">
+<span id="forward-model"></span><h2>Forward model<a class="headerlink" href="#module-temperer.forward_modelling" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="temperer.forward_modelling.Forward_model">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">temperer.forward_modelling.</span></span><span class="sig-name descname"><span class="pre">Forward_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parameters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#temperer.parameters.Parameters" title="temperer.parameters.Parameters"><span class="pre">Parameters</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">current_node</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#temperer.build.single_node" title="temperer.build.single_node"><span class="pre">single_node</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#temperer.forward_modelling.Forward_model" title="Link to this definition"></a></dt>
+<dd><p>1D simulation</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.forward_modelling.Forward_model.simulate_single_node">
+<span class="sig-name descname"><span class="pre">simulate_single_node</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#temperer.forward_modelling.Forward_model.simulate_single_node" title="Link to this definition"></a></dt>
+<dd><p>Start simulating self.current_node</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.forward_modelling.Forward_model.simulate_continental">
+<span class="sig-name descname"><span class="pre">simulate_continental</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#temperer.forward_modelling.Forward_model.simulate_continental" title="Link to this definition"></a></dt>
+<dd><p>Run forward model for single or multi rift</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.forward_modelling.Forward_model.compaction">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">compaction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">top_m</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_m</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi_decay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_maximum_burial_depth_m</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#temperer.forward_modelling.Forward_model.compaction" title="Link to this definition"></a></dt>
+<dd><p>Compact sediment at depth</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>top_m</strong> (<em>float</em>) – Top of sediment (m)</p></li>
+<li><p><strong>base_m</strong> (<em>float</em>) – Base of sediment (m)</p></li>
+<li><p><strong>phi0</strong> (<em>float</em>) – Porosity at surface (fraction)</p></li>
+<li><p><strong>phi_decay</strong> (<em>float</em>) – Exponential decay of porosity with depth (fraction)</p></li>
+<li><p><strong>base_maximum_burial_depth_m</strong> (<em>float</em><em>, </em><em>optional</em>) – Maximum burial depth of sediment (To make sure compaction is irreversable), by default 0</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>base_result</strong> – Depth of sediment base (m)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.forward_modelling.Forward_model.decompaction">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decompaction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">top_m</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_m</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi_decay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#temperer.forward_modelling.Forward_model.decompaction" title="Link to this definition"></a></dt>
+<dd><p>Thickness of sediment without pore space. For calculating deposition rate</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>top_m</strong> (<em>float</em>) – Top of sediment (m)</p></li>
+<li><p><strong>base_m</strong> (<em>float</em>) – Base of sediment (m)</p></li>
+<li><p><strong>phi0</strong> (<em>float</em>) – Porosity at surface (fraction)</p></li>
+<li><p><strong>phi_decay</strong> (<em>float</em>) – Exponential decay of porosity with depth (fraction)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>grain_thickness</strong> – Thickness of sediment without pore space (m)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.forward_modelling.Forward_model.add_sediments">
+<span class="sig-name descname"><span class="pre">add_sediments</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sedrate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xsed_old</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Tsed_old</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">HPsed_old</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idsed_old</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">int32</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">int32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#temperer.forward_modelling.Forward_model.add_sediments" title="Link to this definition"></a></dt>
+<dd><p>Take care of sedimentation at this time step</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sedrate</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – Sedimentation rate at current time steps (m/Ma)</p></li>
+<li><p><strong>sed</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – Top and base of all sediment unit at current time step referenced to seabed at 0 m (m)</p></li>
+<li><p><strong>xsed_old</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – Top and base of sedimentary column at current time step referenced to seabed at 0 m (m)</p></li>
+<li><p><strong>Tsed_old</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – Temperature of sediments at xsed (C)</p></li>
+<li><p><strong>HPsed_old</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – Radiogenic heat production between xsed (W/m3)</p></li>
+<li><p><strong>idsed_old</strong> (<em>np.ndarray</em><em>[</em><em>np.int32</em><em>]</em>) – Sediment ids between xsed</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>sedflag</strong> (<em>bool</em>) – True if sedimentation exists at current time step</p></li>
+<li><p><strong>xsed</strong> (<em>np.ndarray[np.float64]</em>) – Top and base of sedimentary column at current time step referenced to seabed at 0 m (m)</p></li>
+<li><p><strong>Tsed</strong> (<em>np.ndarray[np.float64]</em>) – Temperature of sediments at xsed (C)</p></li>
+<li><p><strong>HPsed</strong> (<em>np.ndarray[np.float64]</em>) – Radiogenic heat production between xsed (W/m3)</p></li>
+<li><p><strong>idsed</strong> (<em>np.ndarray[np.int32]</em>) – Sediment ids between xsed</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.forward_modelling.Forward_model.calculate_new_temperature">
+<span class="sig-name descname"><span class="pre">calculate_new_temperature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sedflag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coord_crust_lith</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_old</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">HP</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xsed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hLith</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Tsed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">HPsed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idsed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">int32</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#temperer.forward_modelling.Forward_model.calculate_new_temperature" title="Link to this definition"></a></dt>
+<dd><p>Calculate new temperature profile in new time step</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sedflag</strong> (<em>bool</em>) – If sediments exists</p></li>
+<li><p><strong>coord</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – 1D vertical mesh of crust, lithosphere and asthenosphere</p></li>
+<li><p><strong>t_old</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – Temperature profile of crust, lithosphere and asthenosphere at previous time step</p></li>
+<li><p><strong>HP</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – RHP of crust, lithosphere and asthenosphere at this new time step</p></li>
+<li><p><strong>xsed</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – 1D vertical mesh of sedimentary column</p></li>
+<li><p><strong>hc</strong> (<em>float</em>) – Depth of base crust</p></li>
+<li><p><strong>hLith</strong> (<em>float</em>) – Depth of base lithosphere</p></li>
+<li><p><strong>Tsed</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – Temperature profile of sediments at previous time step</p></li>
+<li><p><strong>HPsed</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – RHP of sediments at this new time step</p></li>
+<li><p><strong>idsed</strong> (<em>np.ndarray</em><em>[</em><em>np.int32</em><em>]</em>) – ID of sediments</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>_description_</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple[np.ndarray[np.float64],np.ndarray[np.float64],np.ndarray[np.float64],np.ndarray[np.float64]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.forward_modelling.Forward_model.implicit_euler_solve">
+<span class="sig-name descname"><span class="pre">implicit_euler_solve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">T_start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coord_all</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">density_all</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conductivity_packed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k_last_node</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">HP_last_node</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#temperer.forward_modelling.Forward_model.implicit_euler_solve" title="Link to this definition"></a></dt>
+<dd><p>Solve heat equation using backward Euler scheme</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>T_start</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – Temperature profile of starting condition</p></li>
+<li><p><strong>coord_all</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – 1D vertical mesh of whole model</p></li>
+<li><p><strong>density_all</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – Density of whole model</p></li>
+<li><p><strong>conductivity</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – Conductivity of whole model</p></li>
+<li><p><strong>source</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – Heat source term</p></li>
+<li><p><strong>k_last_node</strong> (<em>float</em>) – Conductivity at the base of model</p></li>
+<li><p><strong>HP_last_node</strong> (<em>float</em>) – RHP at the base of model</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>_description_</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple[np.ndarray[np.float64],np.ndarray[np.float64]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-temperer.simulator">
+<span id="simulator"></span><h2>Simulator<a class="headerlink" href="#module-temperer.simulator" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="temperer.simulator.Simulator">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">temperer.simulator.</span></span><span class="sig-name descname"><span class="pre">Simulator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">builder</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#temperer.build.Builder" title="temperer.build.Builder"><span class="pre">Builder</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#temperer.simulator.Simulator" title="Link to this definition"></a></dt>
+<dd><p>Solving model</p>
+<p>Utilities for simulating nodes</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>builder</strong> (<a class="reference internal" href="#temperer.build.Builder" title="temperer.build.Builder"><em>Builder</em></a>) – model builder</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-temperer.postprocessing">
+<span id="results"></span><h2>Results<a class="headerlink" href="#module-temperer.postprocessing" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="temperer.postprocessing.Results">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">temperer.postprocessing.</span></span><span class="sig-name descname"><span class="pre">Results</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">depth</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temperature</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sediments_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sediment_input</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k_crust</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k_lith</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k_asth</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#temperer.postprocessing.Results" title="Link to this definition"></a></dt>
+<dd><p>Simulation results</p>
+<dl class="py class typeddict">
+<dt class="sig sig-object py" id="temperer.postprocessing.Results.resultValues">
+<em class="property"><span class="pre">typeddict</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">resultValues</span></span><a class="headerlink" href="#temperer.postprocessing.Results.resultValues" title="Link to this definition"></a></dt>
+<dd><p><code class="xref py py-class docutils literal notranslate"><span class="pre">typing.TypedDict</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Required Keys<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>depth</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float64</span></code>])</p></li>
+<li><p><strong>layerId</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int32</span></code>])</p></li>
+<li><p><strong>value</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float64</span></code>])</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="temperer.postprocessing.Results.ages">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ages</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">int32</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#temperer.postprocessing.Results.ages" title="Link to this definition"></a></dt>
+<dd><p>Array of all simulated ages</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Array of ages</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.postprocessing.Results.top_crust">
+<span class="sig-name descname"><span class="pre">top_crust</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#temperer.postprocessing.Results.top_crust" title="Link to this definition"></a></dt>
+<dd><p>Depth of crust</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>age</strong> (<em>int</em>) – Geological age</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Depth of crust from sea level (m)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.postprocessing.Results.top_lithosphere">
+<span class="sig-name descname"><span class="pre">top_lithosphere</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#temperer.postprocessing.Results.top_lithosphere" title="Link to this definition"></a></dt>
+<dd><p>Depth of lithospheric mantle</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>age</strong> (<em>int</em>) – Geological age</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Depth of lithospheric mantle / Moho from sea level (m)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.postprocessing.Results.top_asthenosphere">
+<span class="sig-name descname"><span class="pre">top_asthenosphere</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#temperer.postprocessing.Results.top_asthenosphere" title="Link to this definition"></a></dt>
+<dd><p>Depth of Asthenosphere</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>age</strong> (<em>int</em>) – Geological age</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Depth of Asthenosphere from sea level (m)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.postprocessing.Results.crust_thickness">
+<span class="sig-name descname"><span class="pre">crust_thickness</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#temperer.postprocessing.Results.crust_thickness" title="Link to this definition"></a></dt>
+<dd><p>Thickness of crust</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>age</strong> (<em>int</em>) – Geological age</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Thickness of crust (m)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.postprocessing.Results.lithosphere_thickness">
+<span class="sig-name descname"><span class="pre">lithosphere_thickness</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#temperer.postprocessing.Results.lithosphere_thickness" title="Link to this definition"></a></dt>
+<dd><p>Thickness of lithospheric mantle</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>age</strong> (<em>int</em>) – Geological age</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Thickness of lithospheric mantle (m)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.postprocessing.Results.depth">
+<span class="sig-name descname"><span class="pre">depth</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#temperer.postprocessing.Results.depth" title="Link to this definition"></a></dt>
+<dd><p>Depth reference for results</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>age</strong> (<em>int</em>) – Geological age</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Top and base of all cells</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.postprocessing.Results.temperature">
+<span class="sig-name descname"><span class="pre">temperature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sediment_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#temperer.postprocessing.Results.resultValues" title="temperer.postprocessing.Results.resultValues"><span class="pre">resultValues</span></a></span></span><a class="headerlink" href="#temperer.postprocessing.Results.temperature" title="Link to this definition"></a></dt>
+<dd><p>Temperature at top and base of cells</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>age</strong> (<em>int</em>) – Geological age</p></li>
+<li><p><strong>sediment_id</strong> (<em>int</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Optional filter using id of layer by default None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Temperature at top and base of cells</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.postprocessing.Results.sediment_ids">
+<span class="sig-name descname"><span class="pre">sediment_ids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">int32</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#temperer.postprocessing.Results.sediment_ids" title="Link to this definition"></a></dt>
+<dd><p>Layer ids at the centre of cells</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>age</strong> (<em>int</em>) – Geological age</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Layer ids at the center of cells</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.postprocessing.Results.sediment_porosity">
+<span class="sig-name descname"><span class="pre">sediment_porosity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sediment_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#temperer.postprocessing.Results.resultValues" title="temperer.postprocessing.Results.resultValues"><span class="pre">resultValues</span></a></span></span><a class="headerlink" href="#temperer.postprocessing.Results.sediment_porosity" title="Link to this definition"></a></dt>
+<dd><p>Porosity at the centre of cells</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>age</strong> (<em>int</em>) – Geological age</p></li>
+<li><p><strong>sediment_id</strong> (<em>int</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Optional filter using id of layer by default None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Porosity at centre of cells</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.postprocessing.Results.effective_conductivity">
+<span class="sig-name descname"><span class="pre">effective_conductivity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sediment_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#temperer.postprocessing.Results.resultValues" title="temperer.postprocessing.Results.resultValues"><span class="pre">resultValues</span></a></span></span><a class="headerlink" href="#temperer.postprocessing.Results.effective_conductivity" title="Link to this definition"></a></dt>
+<dd><p>Effective conductivity at the centre of cells</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>age</strong> (<em>int</em>) – Geological age</p></li>
+<li><p><strong>sediment_id</strong> (<em>int</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Optional filter using id of layer by default None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Effective conductivity at centre of cells (W/K.m^2)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#temperer.postprocessing.Results.resultValues" title="temperer.postprocessing.Results.resultValues">resultValues</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.postprocessing.Results.heatflow">
+<span class="sig-name descname"><span class="pre">heatflow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sediment_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#temperer.postprocessing.Results.resultValues" title="temperer.postprocessing.Results.resultValues"><span class="pre">resultValues</span></a></span></span><a class="headerlink" href="#temperer.postprocessing.Results.heatflow" title="Link to this definition"></a></dt>
+<dd><p>Heat flow at the centre of cells</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>age</strong> (<em>int</em>) – Geological age</p></li>
+<li><p><strong>sediment_id</strong> (<em>int</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Optional filter using id of layer by default None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Heat flow at centre of cells</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="temperer.postprocessing.Results.basement_heatflow">
+<span class="sig-name descname"><span class="pre">basement_heatflow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#temperer.postprocessing.Results.basement_heatflow" title="Link to this definition"></a></dt>
+<dd><p>Heat flow from the crust to the base of sediments</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>age</strong> (<em>int</em>) – Geological age</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Basement heat flow (W/m3)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="notebooks/Build_within_Python.html" class="btn btn-neutral float-left" title="Build 1D model" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Equinor ASA.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

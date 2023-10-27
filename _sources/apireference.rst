@@ -5,32 +5,32 @@ API Reference
 
 Model
 ---------------
-.. automodule:: temperer.model
+.. automodule:: warmth.model
     :members:
 
 Model builder
 ---------------
-.. automodule:: temperer.build
+.. automodule:: warmth.build
     :members:
-.. autoclass:: temperer.build.Builder
+.. autoclass:: warmth.build.Builder
     :members:
 
 Parameters
 ---------------
-.. automodule:: temperer.parameters
+.. automodule:: warmth.parameters
     :members:
 
 Forward model
 ---------------
-.. automodule:: temperer.forward_modelling
+.. automodule:: warmth.forward_modelling
     :members:
     
 Simulator
 ---------------
-.. automodule:: temperer.simulator
+.. automodule:: warmth.simulator
     :members:
 
 Results
 ---------------
-.. automodule:: temperer.postprocessing
+.. automodule:: warmth.postprocessing
     :members:

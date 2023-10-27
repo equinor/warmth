@@ -1,4 +1,4 @@
-Welcome to Temperer's documentation!
+Welcome to warmth's documentation!
 ====================================
 
 

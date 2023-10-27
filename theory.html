@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Background theory &mdash; temperer  documentation</title>
+  <title>Background theory &mdash; warmth  documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -22,7 +22,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Example" href="example.html" />
-    <link rel="prev" title="Welcome to Temperer’s documentation!" href="index.html" /> 
+    <link rel="prev" title="Welcome to warmth’s documentation!" href="index.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -34,7 +34,7 @@
           
           
           <a href="index.html" class="icon icon-home">
-            temperer
+            warmth
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -63,7 +63,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">temperer</a>
+          <a href="index.html">warmth</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -83,19 +83,19 @@
              
   <section id="background-theory">
 <h1>Background theory<a class="headerlink" href="#background-theory" title="Link to this heading"></a></h1>
-<p>3D simulations in temperer are under active development. Currently, yhey are based on a uniform reactangular grid of 1D nodes (defined in a NodeGrid data structure). The sediment inputs, horizons are present day, are provided as .gri files, which are read into a SedimentStack class.</p>
+<p>3D simulations in warmth are under active development. Currently, yhey are based on a uniform reactangular grid of 1D nodes (defined in a NodeGrid data structure). The sediment inputs, horizons are present day, are provided as .gri files, which are read into a SedimentStack class.</p>
 <section id="pre-requisite-grid-of-1d-node-simulation">
 <h2>Pre-requisite: grid of 1D node simulation<a class="headerlink" href="#pre-requisite-grid-of-1d-node-simulation" title="Link to this heading"></a></h2>
-<p>The complete 1D temperer simulation is run for some of the 1D nodes. For other 1D nodes the subsidence, beta factor, and crustal thickness are interpolated. The 1D simulations can be run using the script <a class="reference internal" href="#temperer3D/parallel-1Dsed.py"><span class="xref myst">parallel-1Dsed.py</span></a>.  Results for each node are pickled to a separate file (this is to be improved!).</p>
+<p>The complete 1D warmth simulation is run for some of the 1D nodes. For other 1D nodes the subsidence, beta factor, and crustal thickness are interpolated. The 1D simulations can be run using the script <a class="reference internal" href="#warmth3D/parallel-1Dsed.py"><span class="xref myst">parallel-1Dsed.py</span></a>.  Results for each node are pickled to a separate file (this is to be improved!).</p>
 </section>
 <section id="d-heat-equation-simulation-using-dolfinx">
 <h2>3D heat equation simulation using dolfinx<a class="headerlink" href="#d-heat-equation-simulation-using-dolfinx" title="Link to this heading"></a></h2>
 <p>The 3D simulation performs a series of heat equation solves, regularly updating the mesh positions from the 1D nodes. The equations are solved using the PETSc solver from the dolfinx package (part of the FeNiCs project). The compute mesh is built by defining hexahedra for every rectangle of 1D nodes and for every layer (i.e. each sediment, the crust, the lithosphere, and the aesthenosphere), which are then subdivided into tetrahedra.</p>
-<p>The dolfinx model building and solving is managed by the class <a class="reference internal" href="#temperer3D/fixed_mesh_model.py"><span class="xref myst">UniformNodeGridFixedSizeMeshModel</span></a>.  The use of this class is demonstrated in <a class="reference internal" href="#tests/temperer3D_mapA_example.py"><span class="xref myst">temperer3D_mapA_example.py</span></a>. Note that the NodeGrid class definition in this script should match the definition used in <a class="reference internal" href="#temperer3D/parallel-1Dsed.py"><span class="xref myst">parallel-1Dsed.py</span></a> to compute the 1D solutions. This script writes the results (mesh positions and function values) at every 1M years in xdmf format for visualization in ParaView.</p>
+<p>The dolfinx model building and solving is managed by the class <a class="reference internal" href="#warmth3D/fixed_mesh_model.py"><span class="xref myst">UniformNodeGridFixedSizeMeshModel</span></a>.  The use of this class is demonstrated in <a class="reference internal" href="#tests/warmth3D_mapA_example.py"><span class="xref myst">warmth3D_mapA_example.py</span></a>. Note that the NodeGrid class definition in this script should match the definition used in <a class="reference internal" href="#warmth3D/parallel-1Dsed.py"><span class="xref myst">parallel-1Dsed.py</span></a> to compute the 1D solutions. This script writes the results (mesh positions and function values) at every 1M years in xdmf format for visualization in ParaView.</p>
 </section>
 <section id="resqml-output">
 <h2>RESQML output<a class="headerlink" href="#resqml-output" title="Link to this heading"></a></h2>
-<p>The test script <a class="reference internal" href="#tests/temperer3D_mapA_example.py"><span class="xref myst">temperer3D_mapA_example.py</span></a> further demonstrates writing the unstructured grid (with properties) in RESQML format, as a pair of .epc and .h5 files.  The RESQML I/O functions are in a separate file, <a class="reference internal" href="#temperer3D/resqpy_helpers.py"><span class="xref myst">resqpy_helpers.py</span></a>, and require a modified version of the resqpy library.  To visualise RESQML data in ParaView, a 3rd-party plug-in can be installed, see <a class="reference external" href="https://github.com/F2I-Consulting/fespp">fespp</a>.</p>
+<p>The test script <a class="reference internal" href="#tests/warmth3D_mapA_example.py"><span class="xref myst">warmth3D_mapA_example.py</span></a> further demonstrates writing the unstructured grid (with properties) in RESQML format, as a pair of .epc and .h5 files.  The RESQML I/O functions are in a separate file, <a class="reference internal" href="#warmth3D/resqpy_helpers.py"><span class="xref myst">resqpy_helpers.py</span></a>, and require a modified version of the resqpy library.  To visualise RESQML data in ParaView, a 3rd-party plug-in can be installed, see <a class="reference external" href="https://github.com/F2I-Consulting/fespp">fespp</a>.</p>
 </section>
 <section id="d-dependencies">
 <h2>3D dependencies<a class="headerlink" href="#d-dependencies" title="Link to this heading"></a></h2>
@@ -107,7 +107,7 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to Temperer’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to warmth’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="example.html" class="btn btn-neutral float-right" title="Example" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

@@ -49,8 +49,8 @@ class UniformNodeGridFixedSizeMeshModel:
         
         self.runSedimentsOnly = sedimentsOnly
 
-        self.numElemInCrust = 0 if self.runSedimentsOnly else 4    # split crust hexahedron into pieces
-        self.numElemInLith = 0 if self.runSedimentsOnly else 2  # split lith hexahedron into pieces
+        self.numElemInCrust = 0 if self.runSedimentsOnly else 8    # split crust hexahedron into pieces
+        self.numElemInLith = 0 if self.runSedimentsOnly else 4  # split lith hexahedron into pieces
         self.numElemInAsth = 0 if self.runSedimentsOnly else 2  # split asth hexahedron into pieces
 
 
@@ -358,7 +358,7 @@ class UniformNodeGridFixedSizeMeshModel:
         """
         if (ss==-1):
             node = self.node1D[node_index]
-            kc = node.crustRHP
+            kc = node.crustRHP * node._upperCrust_ratio
             return kc
         elif (ss==-2):
             return 0
@@ -629,6 +629,7 @@ class UniformNodeGridFixedSizeMeshModel:
             lidval = int(self.layerIDsFcn.x.array[i])
             if (lidval<0):
                 # only relevant for sediment
+                self.mean_porosity.x.array[i] = 0.0
                 continue
             zpos = [ self.mesh.geometry.x[ti,2] for ti in t]
             top_km = np.amin(zpos) / 1e3
@@ -1374,3 +1375,4 @@ def run( model:Model, run_simulation=True, start_time=182, end_time=0, out_dir =
     EPCfilename = mm2.write_hexa_mesh_resqml("temp/")
     print("RESQML model written to: " , EPCfilename)
     read_mesh_resqml_hexa(EPCfilename)  # test reading of the .epc file
+    return mm2

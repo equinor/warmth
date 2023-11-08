@@ -1126,9 +1126,8 @@ class UniformNodeGridFixedSizeMeshModel:
 
         a = self.c_rho*u*v*ufl.dx + dt*ufl.dot(self.thermalCond*ufl.grad(u), ufl.grad(v)) * ufl.dx
 
-        # source = self.globalSediments.rhp[self.numberOfSediments-1]  * 1e-6   # conversion from uW/m^3
         # f = dolfinx.fem.Constant(self.mesh, PETSc.ScalarType(source))  # source term 
-        f = self.rhpFcn * 1e-6   # conversion from uW/m^3
+        f = self.rhpFcn  # source term, units of W/m^3
         print("mean RHP", np.mean(self.rhpFcn.x.array[:]))
 
         if ( self.useBaseFlux ):

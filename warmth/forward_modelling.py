@@ -320,7 +320,8 @@ class Forward_model:
             Temperature in crust, lithospheric mantle and asthenosphere after accounting for advection
         """
         # todo ulf: this pchip is slow, how about linear interpolation?
-        interpolated_temperature = interpolate.pchip_interpolate(coord_previous, T_previous, coord_rift)
+        # interpolated_temperature = interpolate.pchip_interpolate(coord_previous, T_previous, coord_rift)
+        interpolated_temperature = T_previous
         n = coord_previous.size-1
         # if asthenosphere goes up
         # todo: ulf: replace with argmax
@@ -1302,6 +1303,8 @@ class Forward_model:
                 T_new = np.interp(coord_current, coord_start_this_rift, T_new)
 
                 # TODO: underplate, asthenospheric anamaly, melt for all modes
+                # if (self.current_node.X==12150) and (self.current_node.Y==12000):
+                #     print("Lith", i, hLith, lithUpdated)
 
                 # Take care of sedimentation
                 sedflag, xsed, Tsed, HPsed, idsed = self.add_sediments(
@@ -1326,7 +1329,8 @@ class Forward_model:
                     HP_new,
                     xsed,
                     hcUpdated,
-                    hLith,
+                    # hLith,
+                    lithUpdated,
                     Tsed,
                     HPsed,
                     idsed,
@@ -1340,11 +1344,11 @@ class Forward_model:
                     T_new, coord_start_this_rift)
 
                 # Sanity check for maximum lithosphere depth
-                if self._parameters.maxContLithFlag:
-                    if hLith > self._parameters.maxContLith:
-                        hLith = self._parameters.maxContLith
-                    if lithUpdated > self._parameters.maxContLith:
-                        lithUpdated = self._parameters.maxContLith
+                # if self._parameters.maxContLithFlag:
+                #     if hLith > self._parameters.maxContLith:
+                #         hLith = self._parameters.maxContLith
+                #     if lithUpdated > self._parameters.maxContLith:
+                #         lithUpdated = self._parameters.maxContLith
 
                 # New water depth after running this time step
                 densityeff_crust_lith = np.interp(
@@ -1575,10 +1579,19 @@ class Forward_model:
             HP_all = HP
         mean_porosity_arr, sed_idx_arr = self._sediments_mean_porosity(
             xsed,  idsed)
+        # if (self.current_node.X==12150) and (self.current_node.Y==12000):
+        #     print("Lith", i, hLith, lithUpdated)
+        
         density_sed = self._sediment_density(
             mean_porosity_arr, self.current_node.sediments["solidus"].values[sed_idx_arr])
         conductivity_sed = self._sediment_conductivity_sekiguchi(
             mean_porosity_arr, self.current_node.sediments["k_cond"].values[sed_idx_arr],Tsed)
+        if (self.current_node.X==12150) and (self.current_node.Y==12000):
+            print("conductivity_sed", conductivity_sed[0:20], conductivity_sed[-20:] )
+            # print("conductivity_sed", np.mean(conductivity_sed), np.nanmin(conductivity_sed),np.nanmax(conductivity_sed)  )
+            # print("conductivity_sed", np.mean(xsed), np.nanmin(xsed),np.nanmax(xsed)  )
+            print("conductivity_sed", len(conductivity_sed), len(xsed))
+
         conductivity_crust_lith = self._build_crust_lithosphere_properties(
             coord_crust_lith, hc, hLith, self.current_node.kCrust, self.current_node.kLith, self.current_node.kAsth)
         conductivity = np.append(conductivity_sed, conductivity_crust_lith)
@@ -1606,6 +1619,8 @@ class Forward_model:
             SOUR,
             self.current_node.kAsth,
             HP_all[-1],
+            # self.current_node.Tinit[-1],
+            1330+(coord_all[-1]-hLith)*self._parameters.adiab
         )
 
         # split sed from lithos
@@ -1631,6 +1646,7 @@ class Forward_model:
         source: np.ndarray[np.float64], # SOUR
         k_last_node: float,
         HP_last_node: float,
+        T_base: float,
     ) -> tuple[np.ndarray[np.float64], np.ndarray[np.float64]]:
         """Solve heat equation using backward Euler scheme
 
@@ -1682,7 +1698,7 @@ class Forward_model:
                     Lpacked[2,-2] = -1
                     Lpacked[1,-1] = 1
                 else:
-                    Rpacked[-1] = self.current_node.Tinit[-1]
+                    Rpacked[-1] = T_base
                     Lpacked[2,-2] = 0
                     Lpacked[1,-1] = 1
                 T_this_step = solve_banded((1,1),Lpacked,Rpacked)

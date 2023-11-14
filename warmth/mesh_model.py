@@ -286,9 +286,9 @@ class UniformNodeGridFixedSizeMeshModel:
             if (property=='decay'):
                 return [0.5,0.5,0.5][lid]   # porosity decay for crust, lith, aest
             if (property=='solidus'):
-                return [0.5,0.5,0.5][lid]   # solid density decay for crust, lith, aest
+                return [0.5,0.5,0.5][lid]   # solid density for crust, lith, aest
             if (property=='liquidus'):
-                return [0.5,0.5,0.5][lid]   # solid density decay for crust, lith, aest
+                return [0.5,0.5,0.5][lid]   # liquid density for crust, lith, aest
         return np.nan
 
     def porosity0ForLayerID(self, layer_id, node_index):
@@ -318,7 +318,7 @@ class UniformNodeGridFixedSizeMeshModel:
         if (ss==-2):
             return 1000*node.lithsolid
         if (ss==-3):
-            return 1000*node.crustsolid
+            return 1000*node.asthsolid
         if (ss>=0) and (ss<self.numberOfSediments):
             rho = node.sediments.solidus[ss]
             return 1000*rho
@@ -600,7 +600,8 @@ class UniformNodeGridFixedSizeMeshModel:
             nz0 = min(nz0, 1.0)
             res[i] = nz0 * (self.TempBase-self.Temp0) + self.Temp0
             if (p[2]>250000):
-                res[i] = 1369
+                res[i] =  1330 + (p[2]-self.averageLABdepth)*0.0003  # 1369
+
             # Zmax = np.amax(x[2,:])
         # res[x[2,:]<self.Zmin] = self.Temp0 + (( x[2,:][x[2,:]<self.Zmin] - self.Zmin)/1000)*12
         return res
@@ -632,6 +633,8 @@ class UniformNodeGridFixedSizeMeshModel:
                 self.mean_porosity.x.array[i] = 0.0
                 continue
             zpos = [ self.mesh.geometry.x[ti,2] for ti in t]
+            xpos = [ self.mesh.geometry.x[ti,0] for ti in t]
+            ypos = [ self.mesh.geometry.x[ti,1] for ti in t]
             top_km = np.amin(zpos) / 1e3
             bottom_km = np.amax(zpos) / 1e3
             poro0 = self.porosity0.x.array[i]
@@ -656,10 +659,16 @@ class UniformNodeGridFixedSizeMeshModel:
 
             self.thermalCond.x.array[i] = conductivity_effective
             self.mean_porosity.x.array[i] = mean_porosity
-            self.c_rho.x.array[i] = 1000*((self.c_rho.x.array[i]/1000) * (1-mean_porosity) + mean_porosity*1000)
+            self.c_rho.x.array[i] = 1000*((self.c_rho0.x.array[i]/1000) * (1-mean_porosity) + mean_porosity*1000)
 
-        self.rhpFcn.x.array[:] = np.multiply( self.rhp0.x.array[:], (1.0-self.mean_porosity.x.array[:]) )
+            if (np.any(np.array(xpos)==12150)) and (np.any(np.array(ypos)==12000) and (self.tti==0)):
+                print("conductivity_effective", zpos, conductivity_effective, conductivity_effective )
+                # print("conductivity_effective", i, np.mean(conductivity_effective), np.nanmin(conductivity_effective),np.nanmax(conductivity_effective)  )
+                # print("conductivity_effective", i, np.mean(xsed), np.nanmin(xsed),np.nanmax(xsed)  )
+                # print("conductivity_effective", zpos, len(conductivity_effective) )        
 
+        # self.rhpFcn.x.array[:] = np.multiply( self.rhp0.x.array[:], (1.0-self.mean_porosity.x.array[:]) )
+        self.rhpFcn.x.array[:] = np.multiply( self.rhp0.x.array[:], 1.0 )
 
     def getCellMidpoints(self):
         import dolfinx     
@@ -690,6 +699,7 @@ class UniformNodeGridFixedSizeMeshModel:
         Q = dolfinx.fem.FunctionSpace(self.mesh, ("DG", 0))  # discontinuous Galerkin, degree zero
         thermalCond = dolfinx.fem.Function(Q)
         c_rho = dolfinx.fem.Function(Q)
+        self.c_rho0 = dolfinx.fem.Function(Q)
         lid = dolfinx.fem.Function(Q)
         rhp = dolfinx.fem.Function(Q)
         self.porosity0 = dolfinx.fem.Function(Q)
@@ -723,6 +733,7 @@ class UniformNodeGridFixedSizeMeshModel:
 
         crs = [ self.cRhoForLayerID(lid,self.node_index[i]) for i,lid in enumerate(ls)]
         c_rho.x.array[:] = np.array(crs, dtype=PETSc.ScalarType).flatten()
+        self.c_rho0.x.array[:] = np.array(crs, dtype=PETSc.ScalarType).flatten()
 
         # self.node_index[i]
         poro = [ self.porosity0ForLayerID(lid, self.node_index[i])[0] for i,lid in enumerate(ls)]

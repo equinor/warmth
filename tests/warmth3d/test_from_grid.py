@@ -28,11 +28,16 @@ model.builder.set_eustatic_sea_level(haq87)
 for i in model.builder.iter_node():
     i.rift=[[182,175]]
     i.bflux = False
-    i.adiab = 0.3e-3    
+    i.adiab = 0.3e-3
+    i.crustRHP = 0.0
+    i.sediments['rhp']=[0,0,0,0,0,0]
+
 
 model.simulator.simulate_every = 1
-model.parameters.HPdcr = 1e11  # set to "infinite" decay
-model.parameters.bflux = False  # set to "infinite" decay
+model.parameters.HPdcr = 1e32  # set to "infinite" decay
+model.parameters.bflux = False 
+model.parameters.tetha = 0  #  0.01
+model.parameters.alphav = 0
 
 model.simulator.run(save=True,purge=True)
 

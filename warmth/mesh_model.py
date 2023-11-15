@@ -664,9 +664,6 @@ class UniformNodeGridFixedSizeMeshModel:
             self.mean_porosity.x.array[i] = mean_porosity
             self.c_rho.x.array[i] = 1000*((self.c_rho0.x.array[i]/1000) * (1-mean_porosity) + mean_porosity*1000)
 
-            # if (np.any(np.array(xpos)==12150)) and (np.any(np.array(ypos)==12000) and (self.tti==0)):
-            #     print("conductivity_effective", zpos, conductivity_effective, conductivity_effective )
-
         # self.rhpFcn.x.array[:] = np.multiply( self.rhp0.x.array[:], (1.0-self.mean_porosity.x.array[:]) )
         self.rhpFcn.x.array[:] = np.multiply( self.rhp0.x.array[:], 1.0 )
 

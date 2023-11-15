@@ -1,9 +1,9 @@
 import numpy as np
 import pickle
 import itertools
-from subsheat3D.fixed_mesh_model import UniformNodeGridFixedSizeMeshModel
-from subsheat3D.Helpers import NodeGrid
-from subsheat3D.resqpy_helpers import read_mesh_resqml
+from warmth3d.fixed_mesh_model import UniformNodeGridFixedSizeMeshModel
+from warmth3d.Helpers import NodeGrid
+from warmth3d.resqpy_helpers import read_mesh_resqml
 
 #
 # a map for how many meters were eroded between 100-120 My
@@ -192,7 +192,7 @@ def run( nodeGrid, run_simulation=True, start_time=182, end_time=0, out_dir = "o
 
 
 #
-# NOTE: to compute the required 1D node solutions, you must first run  subsheat3D/parallel-1Dsed.py using the same NodeGrid parameters as below!
+# NOTE: to compute the required 1D node solutions, you must first run  warmth3d/parallel-1Dsed.py using the same NodeGrid parameters as below!
 #
 ng = NodeGrid(150, 0, 485, 548, 500, 1000, 5, 1000, 1000)
 ng = NodeGrid(0, 0, 11, 11, 500, 1000, 5, 100, 100)

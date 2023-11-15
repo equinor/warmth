@@ -52,7 +52,7 @@ model.simulator.run(save=True,purge=True)
 # interpolate and extrapolate the missing nodes
 # find nearby nodes from the array indexer_full_sim, which is sorted by x-index
 import itertools
-from subsheat3D.fixed_mesh_model import interpolateNode
+from warmth3d.fixed_mesh_model import interpolateNode
 for ni in range(len(model.builder.nodes)):
     for nj in range(len(model.builder.nodes[ni])):
         if model.builder.nodes[ni][nj] is False:

@@ -27,16 +27,22 @@ model.builder.set_eustatic_sea_level(haq87)
 
 for i in model.builder.iter_node():
     i.rift=[[182,175]]
+    #
+    # set 1D node parameters to be most similar to those in the (later) 3D simulation, for better comparison
+    #
     i.bflux = False
     i.adiab = 0.3e-3
-    i.crustRHP = 0.0
-    i.sediments['rhp']=[0,0,0,0,0,0]
-
+    # i.crustRHP = 0.0
+    # i.sediments['rhp']=[0,0,0,0,0,0]
 
 model.simulator.simulate_every = 1
-model.parameters.HPdcr = 1e32  # set to "infinite" decay
+
+#
+# set 1D simulation parameters to be most similar to those in the (later) 3D simulation, for better comparison
+#
+model.parameters.HPdcr = 1e32   # "infinite" decay of crustal HP
 model.parameters.bflux = False 
-model.parameters.tetha = 0  #  0.01
+model.parameters.tetha = 0
 model.parameters.alphav = 0
 
 model.simulator.run(save=True,purge=True)
@@ -122,7 +128,7 @@ print(f'Max. absolute error in temperature at 3D mesh vertex positions: {max_abs
 print(f'Max. absolute error at depths < 5000m: {max_abs_error_shallow}')
 
 assert (max_abs_error<25.0), "Temperature difference between 3D and 1D simulations is >25"
-assert (max_abs_error_shallow<6.0),  "Temperature difference between 3D and 1D simulations is >6 degrees in the sediments."
+assert (max_abs_error_shallow<5.0),  "Temperature difference between 3D and 1D simulations is >5 in the sediments."
 
 
 

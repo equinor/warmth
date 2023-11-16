@@ -210,6 +210,8 @@
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">iter_node</span><span class="p">():</span>
     <span class="n">i</span><span class="o">.</span><span class="n">rift</span><span class="o">=</span><span class="p">[[</span><span class="mi">182</span><span class="p">,</span><span class="mi">175</span><span class="p">]]</span>
+    <span class="n">i</span><span class="o">.</span><span class="n">bflux</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">i</span><span class="o">.</span><span class="n">adiab</span> <span class="o">=</span> <span class="mf">0.3e-3</span>
 </pre></div>
 </div>
 </div>
@@ -218,7 +220,9 @@
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">simulator</span><span class="o">.</span><span class="n">simulate_every</span> <span class="o">=</span> <span class="mi">1</span>
-</pre></div>
+<span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">HPdcr</span> <span class="o">=</span> <span class="mf">1e11</span>  <span class="c1"># set to &quot;infinite&quot; decay</span>
+<span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">bflux</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># set to &quot;infinite&quot; decay</span>
+<br/></pre></div>
 </div>
 </div>
 <div class="nbinput nblast docutils container">
@@ -284,7 +288,7 @@
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="c1"># interpolate and extrapolate the missing nodes</span>
 <span class="c1"># find nearby nodes from the array indexer_full_sim, which is sorted by x-index</span>
 <span class="kn">import</span> <span class="nn">itertools</span>
-<span class="kn">from</span> <span class="nn">subsheat3D.fixed_mesh_model</span> <span class="kn">import</span> <span class="n">interpolateNode</span>
+<span class="kn">from</span> <span class="nn">warmth3d.fixed_mesh_model</span> <span class="kn">import</span> <span class="n">interpolateNode</span>
 <span class="k">for</span> <span class="n">ni</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">nodes</span><span class="p">)):</span>
     <span class="k">for</span> <span class="n">nj</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">ni</span><span class="p">])):</span>
         <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">ni</span><span class="p">][</span><span class="n">nj</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
@@ -324,7 +328,6 @@
         <span class="c1"># if (model.builder.nodes[ni][nj].Y&gt;12000):</span>
         <span class="c1">#     model.builder.nodes[ni][nj].crustRHP = (2e-6) * 4</span>
         <span class="c1">#     model.builder.nodes[ni][nj].rhp = (2e-6) * 4</span>
-        <span class="n">model</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">ni</span><span class="p">][</span><span class="n">nj</span><span class="p">]</span><span class="o">.</span><span class="n">crustRHP</span> <span class="o">=</span> <span class="p">(</span><span class="mf">2e0</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1</span>
 <br/></pre></div>
 </div>
 </div>
@@ -342,7 +345,7 @@
     <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="s1">&#39;temp&#39;</span><span class="p">)</span>
 <span class="k">except</span> <span class="ne">FileExistsError</span><span class="p">:</span>
     <span class="k">pass</span>
-<span class="n">run</span><span class="p">(</span><span class="n">model</span><span class="p">,</span><span class="n">start_time</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">time_start</span><span class="p">,</span><span class="n">end_time</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">mm2</span> <span class="o">=</span> <span class="n">run</span><span class="p">(</span><span class="n">model</span><span class="p">,</span><span class="n">start_time</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">time_start</span><span class="p">,</span><span class="n">end_time</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <br/><br/></pre></div>
 </div>
 </div>
@@ -369,8 +372,44 @@ buildVertices
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="n">hx</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">num_nodes_x</span> <span class="o">//</span> <span class="mi">2</span>
+<span class="n">hy</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">num_nodes_y</span> <span class="o">//</span> <span class="mi">2</span>
+<span class="c1"># hx = model.builder.grid.num_nodes_x - 1 - pad</span>
+<span class="c1"># hy = model.builder.grid.num_nodes_y - 1 - pad</span>
+
+<span class="n">nn</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">hy</span><span class="p">][</span><span class="n">hx</span><span class="p">]</span>
+<span class="n">dd</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">_depth_out</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="n">node_ind</span> <span class="o">=</span> <span class="n">hy</span><span class="o">*</span><span class="n">model</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">num_nodes_x</span> <span class="o">+</span> <span class="n">hx</span>
+<span class="n">v_per_n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">mm2</span><span class="o">.</span><span class="n">mesh_vertices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">num_nodes_y</span><span class="o">*</span><span class="n">model</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">num_nodes_x</span><span class="p">))</span>
+
+<span class="n">temp_1d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">temperature_out</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="n">nan</span><span class="o">=</span><span class="mf">5.0</span><span class="p">)</span>
+<span class="n">temp_3d_ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">([</span><span class="n">mm2</span><span class="o">.</span><span class="n">mesh_reindex</span><span class="o">==</span><span class="n">i</span><span class="p">])[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">node_ind</span><span class="o">*</span><span class="n">v_per_n</span><span class="p">,</span> <span class="p">(</span><span class="n">node_ind</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_per_n</span><span class="p">)</span> <span class="p">]</span> <span class="p">)</span>
+<span class="n">dd_mesh</span> <span class="o">=</span> <span class="n">mm2</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">temp_3d_ind</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span>
+<span class="n">temp_3d_mesh</span> <span class="o">=</span> <span class="n">mm2</span><span class="o">.</span><span class="n">u_n</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">array</span><span class="p">[</span><span class="n">temp_3d_ind</span><span class="p">]</span>
+
+<span class="n">temp_1d_at_mesh_pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">dd_mesh</span><span class="p">,</span> <span class="n">dd</span><span class="p">,</span> <span class="n">temp_1d</span><span class="p">)</span>
+<span class="n">dd_subset</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">dd_mesh</span><span class="o">&lt;</span><span class="mi">5000</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Max. absolute error in temperature at 3D mesh vertex positions: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">temp_1d_at_mesh_pos</span><span class="o">-</span><span class="n">temp_3d_mesh</span><span class="p">))</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Max. absolute error at depths &lt; 5000m: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">temp_1d_at_mesh_pos</span><span class="p">[</span><span class="n">dd_subset</span><span class="p">]</span><span class="o">-</span><span class="n">temp_3d_mesh</span><span class="p">[</span><span class="n">dd_subset</span><span class="p">]))</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">matplotlib</span>
+<span class="kn">import</span> <span class="nn">matplotlib</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;TkAgg&#39;</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">pyplot</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span> <span class="n">dd</span><span class="p">,</span> <span class="n">temp_1d</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;1D simulation&#39;</span><span class="p">);</span>
+<span class="c1"># plt.pyplot.plot( dd, temp_3d, label=f&#39;3D simulation&#39;);</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">pyplot</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span> <span class="n">dd_mesh</span><span class="p">,</span> <span class="n">temp_3d_mesh</span><span class="p">,</span> <span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;3D simulation (nodes)&#39;</span><span class="p">);</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">pyplot</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">&quot;lower right&quot;</span><span class="p">,</span> <span class="n">prop</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;size&#39;</span><span class="p">:</span> <span class="mi">7</span><span class="p">})</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">pyplot</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<br/></pre></div>
 </div>
 </div>
 

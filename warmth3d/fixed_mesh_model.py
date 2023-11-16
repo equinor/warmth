@@ -5,8 +5,8 @@ from typing import Iterator, List, Literal
 
 from warmth.build import single_node
 from warmth.logging import logger
-from subsheat3D.Helpers import  NodeParameters1D, top_crust,top_sed,thick_crust,  top_lith, top_asth, top_sed_id, bottom_sed_id
-from subsheat3D.resqpy_helpers import write_tetra_grid_with_properties, write_hexa_grid_with_properties
+from warmth3d.Helpers import  NodeParameters1D, top_crust,top_sed,thick_crust,  top_lith, top_asth, top_sed_id, bottom_sed_id
+from warmth3d.resqpy_helpers import write_tetra_grid_with_properties, write_hexa_grid_with_properties
 
 #
 # RHP: in sediments: constant, part of the sediment lithology parametrization (e.g. 2.301755e-09)
@@ -1126,9 +1126,8 @@ class UniformNodeGridFixedSizeMeshModel:
 
         a = self.c_rho*u*v*ufl.dx + dt*ufl.dot(self.thermalCond*ufl.grad(u), ufl.grad(v)) * ufl.dx
 
-        # source = self.globalSediments.rhp[self.numberOfSediments-1]  * 1e-6   # conversion from uW/m^3
         # f = dolfinx.fem.Constant(self.mesh, PETSc.ScalarType(source))  # source term 
-        f = self.rhpFcn * 1e-6   # conversion from uW/m^3
+        f = self.rhpFcn  # source term, units of W/m^3
         print("mean RHP", np.mean(self.rhpFcn.x.array[:]))
 
         if ( self.useBaseFlux ):

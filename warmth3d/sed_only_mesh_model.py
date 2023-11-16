@@ -3,8 +3,8 @@ from mpi4py import MPI
 from scipy.interpolate import LinearNDInterpolator
 
 from warmth.logging import logger
-from subsheat3D.Helpers import NodeGrid, NodeParameters1D, top_crust, top_sed, thick_crust, thick_lith, top_lith, top_asth, top_sed_id, bottom_sed_id, thick_sed, volumeOfTet
-from subsheat3D.resqpy_helpers import write_tetra_grid_with_properties, write_hexa_grid_with_properties
+from warmth3d.Helpers import NodeGrid, NodeParameters1D, top_crust, top_sed, thick_crust, thick_lith, top_lith, top_asth, top_sed_id, bottom_sed_id, thick_sed, volumeOfTet
+from warmth3d.resqpy_helpers import write_tetra_grid_with_properties, write_hexa_grid_with_properties
 
 #
 # RHP: in sediments: constant, part of the sediment lithology parametrization (e.g. 2.301755e-09)

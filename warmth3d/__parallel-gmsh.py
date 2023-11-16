@@ -3,8 +3,8 @@ import pickle
 import pandas as pd
 # import subsheat
 # from subsheat.data import haq87
-from subsheat3D.SedimentStack import SedimentStack
-from subsheat3D.deforming_model import MultiNodeModel
+from warmth3d.SedimentStack import SedimentStack
+from warmth3d.deforming_model import MultiNodeModel
 
 import os
 
@@ -13,7 +13,7 @@ from multiprocessing import Pool
 from dataclasses import dataclass
 import itertools
 
-from subsheat3D.Helpers import NodeGrid
+from warmth3d.Helpers import NodeGrid
 
 # logger = get_logger(__name__)
 

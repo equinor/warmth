@@ -80,8 +80,8 @@ def thick_lith(nn, tti):
 def top_lith(nn, tti):
     return top_crust(nn,tti) + thick_crust(nn,tti)
 def top_asth(nn, tti):
-    return 130e3+nn.subsidence[tti]+nn.sed_thickness_ls[tti]
-    # return thick_lith(nn,tti)
+    # return 130e3+nn.subsidence[tti]+nn.sed_thickness_ls[tti]
+    return thick_crust(nn,tti)+thick_lith(nn,tti)+nn.subsidence[tti]+nn.sed_thickness_ls[tti]
     # return thick_lith(nn,tti) + top_lith(nn,tti)
 def top_sed_id(nn, sed_id, tti):
     if (tti > nn.sed.shape[2]-1):    

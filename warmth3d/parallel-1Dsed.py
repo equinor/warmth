@@ -5,9 +5,9 @@ import itertools
 
 import warmth
 from warmth.data import haq87
-from subsheat3D.SedimentStack import SedimentStack
+from warmth3d.SedimentStack import SedimentStack
 
-from subsheat3D.Helpers import NodeGrid, getNodeParameters
+from warmth3d.Helpers import NodeGrid, getNodeParameters
 
 # import redis 
 

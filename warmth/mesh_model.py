@@ -49,8 +49,9 @@ class UniformNodeGridFixedSizeMeshModel:
         
         self.runSedimentsOnly = sedimentsOnly
 
-        self.numElemInCrust = 0 if self.runSedimentsOnly else 4    # split crust hexahedron into pieces
-        self.numElemInLith = 0 if self.runSedimentsOnly else 2  # split lith hexahedron into pieces
+        self.numElemPerSediment = 4
+        self.numElemInCrust = 0 if self.runSedimentsOnly else 8    # split crust hexahedron into pieces
+        self.numElemInLith = 0 if self.runSedimentsOnly else 4  # split lith hexahedron into pieces
         self.numElemInAsth = 0 if self.runSedimentsOnly else 2  # split asth hexahedron into pieces
 
 
@@ -79,6 +80,7 @@ class UniformNodeGridFixedSizeMeshModel:
         self.mean_porosity = None
         self.c_rho = None
         self.numberOfSediments = model.builder.input_horizons.shape[0]-1 #skip basement
+        self.numberOfSedimentCells = self.numberOfSediments * self.numElemPerSediment
 
         self.interpolators = {}
    
@@ -277,18 +279,19 @@ class UniformNodeGridFixedSizeMeshModel:
             return phi
         if (layer_id<=-1) and (layer_id>=-3):
             lid = -layer_id -1
+            node = self.node1D[node_index]
             if (property=='k_cond'):
-                return [0.1,0.1,0.1][lid]
+                return [node.kCrust, node.kLith, node.kAsth][lid]
             if (property=='rhp'):
-                return [0.0,0.0,0.0][lid]  # RHP in crust is not yet supported!
+                return [node.crustRHP,0.0,0.0][lid] 
             if (property=='phi'):
-                return [0.1,0.0,0.0][lid]   # porosity for crust, lith, aest
+                return [0.0,0.0,0.0][lid]   # porosity for crust, lith, aest
             if (property=='decay'):
-                return [0.5,0.5,0.5][lid]   # porosity decay for crust, lith, aest
+                return [0.5,0.5,0.5][lid]   # porosity decay for crust, lith, aest ?
             if (property=='solidus'):
-                return [0.5,0.5,0.5][lid]   # solid density decay for crust, lith, aest
+                return [node.crustsolid,node.lithsolid,node.asthsolid][lid]   # solid density for crust, lith, aest
             if (property=='liquidus'):
-                return [0.5,0.5,0.5][lid]   # solid density decay for crust, lith, aest
+                return [node.crustliquid,node.lithliquid,node.asthliquid][lid]   # liquid density for crust, lith, aest
         return np.nan
 
     def porosity0ForLayerID(self, layer_id, node_index):
@@ -318,7 +321,7 @@ class UniformNodeGridFixedSizeMeshModel:
         if (ss==-2):
             return 1000*node.lithsolid
         if (ss==-3):
-            return 1000*node.crustsolid
+            return 1000*node.asthsolid
         if (ss>=0) and (ss<self.numberOfSediments):
             rho = node.sediments.solidus[ss]
             return 1000*rho
@@ -358,7 +361,7 @@ class UniformNodeGridFixedSizeMeshModel:
         """
         if (ss==-1):
             node = self.node1D[node_index]
-            kc = node.crustRHP
+            kc = node.crustRHP * node._upperCrust_ratio
             return kc
         elif (ss==-2):
             return 0
@@ -393,19 +396,23 @@ class UniformNodeGridFixedSizeMeshModel:
 
         for node in self.node1D:
             top_of_sediments = top_sed(node, tti)
-            self.mesh_vertices_0.append( [ node.X, node.Y, top_of_sediments - 0.0*(self.numberOfSediments+1) ] )
-            self.sed_diff_z.append(-self.minimumCellThick*(self.numberOfSediments+1))
+            self.mesh_vertices_0.append( [ node.X, node.Y, top_of_sediments - 0.0*(self.numberOfSedimentCells+1) ] )
+            self.sed_diff_z.append(-self.minimumCellThick*(self.numberOfSedimentCells+1))
             self.mesh_vertices_age_unsorted.append(node.sediments.topage[0])  # append top age of top sediment
             for ss in range(self.numberOfSediments):
-                base_of_current_sediments = bottom_sed_id(node, ss, tti)
-                if self.runSedimentsOnly:
-                    zpos = base_of_current_sediments
-                else:
-                    zpos = top_of_sediments + base_of_current_sediments
-                vert = np.array([ node.X, node.Y, zpos ])
-                self.mesh_vertices_0.append( vert )
-                self.sed_diff_z.append(-self.minimumCellThick*(self.numberOfSediments-ss))
-                self.mesh_vertices_age_unsorted.append(node.sediments.baseage[ss])  # append base age of current sediment
+                for j in range(self.numElemPerSediment):
+                    base_of_prev_sediments = bottom_sed_id(node, ss-1, tti) if (ss>0) else top_of_sediments
+                    base_of_current_sediments = bottom_sed_id(node, ss, tti)
+                    base_of_current_sediments = base_of_prev_sediments + (base_of_current_sediments-base_of_prev_sediments)* (j+1) / self.numElemPerSediment
+                    if self.runSedimentsOnly:
+                        zpos = base_of_current_sediments
+                    else:
+                        zpos = top_of_sediments + base_of_current_sediments
+                    vert = np.array([ node.X, node.Y, zpos ])
+                    self.mesh_vertices_0.append( vert )
+                    self.sed_diff_z.append(-self.minimumCellThick*(self.numberOfSedimentCells - (ss*self.numElemPerSediment+j) ))
+                    age_of_previous = node.sediments.baseage[ss-1] if (ss>0) else 0.0
+                    self.mesh_vertices_age_unsorted.append( age_of_previous + ((j+1) / self.numElemPerSediment) * (node.sediments.baseage[ss]-age_of_previous) )  # append interpolatedbase age of current sediment
 
             if not self.runSedimentsOnly:
                 base_of_last_sediments = bottom_sed_id(node, self.numberOfSediments-1, tti) if (self.numberOfSediments>0) else top_of_sediments
@@ -498,10 +505,9 @@ class UniformNodeGridFixedSizeMeshModel:
                 for i in range(4):
                     h.append(q[i]*v_per_n + s)
                 hexaHedra.append(h)
-                lid = s
-                if (s >= self.numberOfSediments):
-                    ss = s - self.numberOfSediments
-                    # lid = -((s+1)-self.numberOfSediments)
+                lid = s // self.numElemPerSediment
+                if (s >= self.numberOfSedimentCells):
+                    ss = s - self.numberOfSedimentCells
                     if (ss>=0) and (ss<self.numElemInCrust):
                         lid = -1                        
                     if (ss>=self.numElemInCrust) and (ss < self.numElemInCrust+self.numElemInLith):
@@ -529,7 +535,7 @@ class UniformNodeGridFixedSizeMeshModel:
         tetsplit1 = [ [1,2,4,8], [1,2,5,8], [4,8,2,3], [2,3,7,8], [2,5,6,8], [2,6,7,8] ]
         tetsplit0 = [ [ p-1 for p in v ] for v in tetsplit1 ]
         lid_per_node = [100]
-        for i in range(self.numberOfSediments):
+        for i in range(self.numberOfSedimentCells):
             lid_per_node.append(i)
         if not self.runSedimentsOnly: 
             for i in range(1,self.numElemInCrust+1):
@@ -600,7 +606,8 @@ class UniformNodeGridFixedSizeMeshModel:
             nz0 = min(nz0, 1.0)
             res[i] = nz0 * (self.TempBase-self.Temp0) + self.Temp0
             if (p[2]>250000):
-                res[i] = 1369
+                res[i] =  1330 + (p[2]-self.averageLABdepth)*0.0003  # 1369
+
             # Zmax = np.amax(x[2,:])
         # res[x[2,:]<self.Zmin] = self.Temp0 + (( x[2,:][x[2,:]<self.Zmin] - self.Zmin)/1000)*12
         return res
@@ -629,8 +636,15 @@ class UniformNodeGridFixedSizeMeshModel:
             lidval = int(self.layerIDsFcn.x.array[i])
             if (lidval<0):
                 # only relevant for sediment
+                self.mean_porosity.x.array[i] = 0.0
                 continue
             zpos = [ self.mesh.geometry.x[ti,2] for ti in t]
+            xpos = [ self.mesh.geometry.x[ti,0] for ti in t]
+            ypos = [ self.mesh.geometry.x[ti,1] for ti in t]
+            fkey = self.floatKey2D([xpos[0]+2e-2, ypos[0]+2e-2])
+            meshZmin = UniformNodeGridFixedSizeMeshModel.point_top_vertex_map.get(fkey, 1e10)
+            if (meshZmin < 1e9):
+                zpos = [ (zp-meshZmin) for zp in zpos ]
             top_km = np.amin(zpos) / 1e3
             bottom_km = np.amax(zpos) / 1e3
             poro0 = self.porosity0.x.array[i]
@@ -640,25 +654,18 @@ class UniformNodeGridFixedSizeMeshModel:
             mean_porosity = f1*f2
             self.porosityAtDepth.x.array[i] = mean_porosity
             
-            # cond_local = self.kForLayerID(lidval, i)
             cond_local = self.kForLayerID(lidval, self.node_index[i])
-
-            # conductivity_effective = self.kForLayerID(lidval) ** (1 - mean_porosity) * 0.6 ** mean_porosity
-
             temperature_C = np.mean(np.array([ self.uh.x.array[ti] for ti in t]))
             temperature_K = 273.15 + temperature_C
             conductivity_effective = 1.84 + 358 * ( (1.0227*cond_local)-1.882) * ((1/temperature_K)-0.00068)
             conductivity_effective = conductivity_effective * (1.0-mean_porosity) # * np.sqrt(1-mean_porosity)
-            # if (i % 200 == 0):
-            #     print("Sekiguchi", i, self.tti,  conductivity_effective, conductivity_effective / (1.0-mean_porosity), cond_local, self.kForLayerID(lidval), temperature_C, mean_porosity, poro0, top_km, bottom_km)
-            #     print("Sekiguchi", i, top_km, bottom_km, f1, f2)
 
             self.thermalCond.x.array[i] = conductivity_effective
             self.mean_porosity.x.array[i] = mean_porosity
-            self.c_rho.x.array[i] = 1000*((self.c_rho.x.array[i]/1000) * (1-mean_porosity) + mean_porosity*1000)
+            self.c_rho.x.array[i] = 1000*((self.c_rho0.x.array[i]/1000) * (1-mean_porosity) + mean_porosity*1000)
 
-        self.rhpFcn.x.array[:] = np.multiply( self.rhp0.x.array[:], (1.0-self.mean_porosity.x.array[:]) )
-
+        # self.rhpFcn.x.array[:] = np.multiply( self.rhp0.x.array[:], (1.0-self.mean_porosity.x.array[:]) )
+        self.rhpFcn.x.array[:] = np.multiply( self.rhp0.x.array[:], 1.0 )
 
     def getCellMidpoints(self):
         import dolfinx     
@@ -689,6 +696,7 @@ class UniformNodeGridFixedSizeMeshModel:
         Q = dolfinx.fem.FunctionSpace(self.mesh, ("DG", 0))  # discontinuous Galerkin, degree zero
         thermalCond = dolfinx.fem.Function(Q)
         c_rho = dolfinx.fem.Function(Q)
+        self.c_rho0 = dolfinx.fem.Function(Q)
         lid = dolfinx.fem.Function(Q)
         rhp = dolfinx.fem.Function(Q)
         self.porosity0 = dolfinx.fem.Function(Q)
@@ -722,6 +730,7 @@ class UniformNodeGridFixedSizeMeshModel:
 
         crs = [ self.cRhoForLayerID(lid,self.node_index[i]) for i,lid in enumerate(ls)]
         c_rho.x.array[:] = np.array(crs, dtype=PETSc.ScalarType).flatten()
+        self.c_rho0.x.array[:] = np.array(crs, dtype=PETSc.ScalarType).flatten()
 
         # self.node_index[i]
         poro = [ self.porosity0ForLayerID(lid, self.node_index[i])[0] for i,lid in enumerate(ls)]
@@ -967,9 +976,9 @@ class UniformNodeGridFixedSizeMeshModel:
             print("Neumann conditions: ", self.tti, np.count_nonzero(domain_c.x.array), np.count_nonzero(domain_zero.x.array))
 
             g = (-1.0*baseFlux) * ufl.conditional( domain_c > 0, 1.0, 0.0 )
-            L = (self.c_rho*self.u_n + 1e-6*dt*f)*v*ufl.dx - dt * g * v * ufl.ds    # last term reflects Neumann BC 
+            L = (self.c_rho*self.u_n + dt*f)*v*ufl.dx - dt * g * v * ufl.ds    # last term reflects Neumann BC 
         else:
-            L = (self.c_rho*self.u_n + 1e-6*dt*f)*v*ufl.dx   # no Neumann BC 
+            L = (self.c_rho*self.u_n + dt*f)*v*ufl.dx   # no Neumann BC 
 
         bilinear_form = dolfinx.fem.form(a)
         linear_form = dolfinx.fem.form(L)
@@ -1374,3 +1383,4 @@ def run( model:Model, run_simulation=True, start_time=182, end_time=0, out_dir =
     EPCfilename = mm2.write_hexa_mesh_resqml("temp/")
     print("RESQML model written to: " , EPCfilename)
     read_mesh_resqml_hexa(EPCfilename)  # test reading of the .epc file
+    return mm2

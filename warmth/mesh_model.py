@@ -1,15 +1,19 @@
+from typing import Tuple
 import numpy as np
 from mpi4py import MPI
 import meshio
+from pyparsing import Literal
 import dolfinx  
 from petsc4py import PETSc
 import ufl
 from scipy.interpolate import LinearNDInterpolator
 
-from warmth.build import single_node
+from warmth.build import single_node, Builder
+from warmth.forward_modelling import Forward_model
+from .parameters import Parameters
 from .model import Model
 from warmth.logging import logger
-from .mesh_utils import  top_crust,top_sed,thick_crust,  top_lith, top_asth, top_sed_id, bottom_sed_id,NodeGrid
+from .mesh_utils import  top_crust,top_sed,thick_crust,  top_lith, top_asth, top_sed_id, bottom_sed_id,interpolate_all_nodes
 from .resqpy_helpers import write_tetra_grid_with_properties, write_hexa_grid_with_properties,read_mesh_resqml_hexa
 def tic():
     #Homemade version of matlab tic and toc functions
@@ -36,12 +40,14 @@ class UniformNodeGridFixedSizeMeshModel:
     point_domain_edge_map = {}
     point_top_vertex_map = {}
     point_bottom_vertex_map = {}
-    def __init__(self, model:Model, modelName="test", sedimentsOnly = False):
-        self.node1D = [n for n in model.builder.iter_node()]
+    def __init__(self, builder:Builder,parameters:Parameters,  sedimentsOnly = False):
+        self._builder = builder
+        self._parameters=parameters
+        self.node1D = [n for n in self._builder.iter_node()]
         self.num_nodes = len(self.node1D)
         self.mesh = None
 
-        self.modelName = modelName
+        self.modelName = self._parameters.name
         self.Temp0 = 5
         self.TempBase = 1369
         self.verbose = True
@@ -55,8 +61,8 @@ class UniformNodeGridFixedSizeMeshModel:
         self.numElemInAsth = 0 if self.runSedimentsOnly else 2  # split asth hexahedron into pieces
 
 
-        self.num_nodes_x = model.builder.grid.num_nodes_x
-        self.num_nodes_y = model.builder.grid.num_nodes_y
+        self.num_nodes_x = self._builder.grid.num_nodes_x
+        self.num_nodes_y = self._builder.grid.num_nodes_y
         self.convexHullEdges = []
         for i in range(self.num_nodes_x-1):
             edge = [i, i+1]
@@ -79,7 +85,7 @@ class UniformNodeGridFixedSizeMeshModel:
         self.thermalCond = None
         self.mean_porosity = None
         self.c_rho = None
-        self.numberOfSediments = model.builder.input_horizons.shape[0]-1 #skip basement
+        self.numberOfSediments = self._builder.input_horizons.shape[0]-1 #skip basement
         self.numberOfSedimentCells = self.numberOfSediments * self.numElemPerSediment
 
         self.interpolators = {}
@@ -260,14 +266,14 @@ class UniformNodeGridFixedSizeMeshModel:
         return z0
 
     #
-    def getSedimentPropForLayerID(self, property, layer_id, node_index):
+    def getSedimentPropForLayerID(self, property, layer_id:int, node_index:int) ->float:
         """
         """           
         assert property in ['k_cond', 'rhp', 'phi', 'decay', 'solidus', 'liquidus'], "Unknown property " + property
         if (layer_id>=0) and (layer_id<self.numberOfSediments):
             # node_index = ind2 // (self.numberOfSediments+6)  # +6 because crust, lith, aest are each cut into two
             node = self.node1D[node_index]
-            phi = node.sediments[property][layer_id]
+            prop = node.sediments[property][layer_id]
             # if (property=='phi') and phi>0.7 and node.Y<40000:
             #     print("phi", property, phi, node_index, node)
             #     breakpoint()
@@ -276,7 +282,7 @@ class UniformNodeGridFixedSizeMeshModel:
             #     breakpoint()
             # phi = self.globalSediments[property][layer_id]
             # assert abs(phi-phi0)<1e-6
-            return phi
+            return prop
         if (layer_id<=-1) and (layer_id>=-3):
             lid = -layer_id -1
             node = self.node1D[node_index]
@@ -294,7 +300,7 @@ class UniformNodeGridFixedSizeMeshModel:
                 return [node.crustliquid,node.lithliquid,node.asthliquid][lid]   # liquid density for crust, lith, aest
         return np.nan
 
-    def porosity0ForLayerID(self, layer_id, node_index):
+    def porosity0ForLayerID(self, layer_id:int, node_index:int)->Tuple[float, float]:
         """Porosity (at surface) conductivity value for the given layer index
         """           
         if (layer_id==-1):
@@ -311,37 +317,24 @@ class UniformNodeGridFixedSizeMeshModel:
             return phi, decay
         return 0.0, 0.0
 
-    def cRhoForLayerID(self, ss, node_index):
-        #
-        # prefactor 1000 is the heat capacity.. assumed constant
-        #
+    def cRhoForLayerID(self, ss:int, node_index:int)->float:      
         node = self.node1D[node_index]
         if (ss==-1):
-            return 1000*node.crustsolid
+            return self._parameters.cp*node.crustsolid
         if (ss==-2):
-            return 1000*node.lithsolid
+            return self._parameters.cp*node.lithsolid
         if (ss==-3):
-            return 1000*node.asthsolid
+            return self._parameters.cp*node.asthsolid
         if (ss>=0) and (ss<self.numberOfSediments):
             rho = node.sediments.solidus[ss]
-            return 1000*rho
-        return 1000*node.crustsolid
+            return self._parameters.cp*rho
+        return self._parameters.cp*node.crustsolid
 
-    def kForLayerID(self, ss, node_index):
+    def kForLayerID(self, ss:int, node_index:int)->float:
         """Thermal conductivity for a layer ID index
         """
-        # ind0 = cell_id
-        # ind1 = self.cell_index[cell_id]
-        # ind2 = np.where(self.cell_index==cell_id)[0][0]
-        # if self.cell_data_layerID[ind2] != ss:
-        #     print("ind", cell_id, ind0, ind1, ind2)
-        #     print(len(self.cell_index), np.amin(self.cell_index), np.amax(self.cell_index))
-        #     print(len(self.cell_data_layerID), np.amin(self.cell_data_layerID), np.amax(self.cell_data_layerID))
-        #     print("kForLayerID", ss, ind0, ind1, ind2, self.cell_data_layerID[self.cell_index[cell_id]] )
-        # assert self.cell_data_layerID[ind2] == ss
         if (node_index > len(self.node1D)-1):
-            print("cell ID", node_index, len(self.node1D))
-            breakpoint()
+            raise Exception(f"Node index {node_index} larger then node length {len(self.node1D)}")
         node = self.node1D[node_index]
         if (ss==-1):
             return node.kCrust
@@ -356,17 +349,13 @@ class UniformNodeGridFixedSizeMeshModel:
             return kc
 
 
-    def rhpForLayerID(self, ss, node_index):
+    def rhpForLayerID(self, ss:int, node_index:int)->float:
         """Radiogenic heat production for a layer ID index
         """
         if (ss==-1):
             node = self.node1D[node_index]
             kc = node.crustRHP * node._upperCrust_ratio
             return kc
-        elif (ss==-2):
-            return 0
-        elif (ss==-3):
-            return 0
         elif (ss>=0) and (ss<self.numberOfSediments):
             node = self.node1D[node_index]
             kc = node.sediments.rhp[ss]
@@ -392,7 +381,7 @@ class UniformNodeGridFixedSizeMeshModel:
         if not self.runSedimentsOnly:
             mean_top_of_lith = np.mean( np.array( [ self.getTopOfLithAtNode(tti, node) for node in self.node1D ] ) )
             mean_top_of_asth = np.mean( np.array( [ self.getTopOfAsthAtNode(tti, node) for node in self.node1D ] ) )
-            logger.info(f'Time {tti}: mean top of lith: {mean_top_of_lith:.1f}; of aesth: {mean_top_of_asth:.1f} ')
+            logger.info(f'Time {tti}: mean top of lith: {mean_top_of_lith:.1f}; of asth: {mean_top_of_asth:.1f} ')
 
         for node in self.node1D:
             top_of_sediments = top_sed(node, tti)
@@ -457,20 +446,19 @@ class UniformNodeGridFixedSizeMeshModel:
             self.updateBottomVertexMap()
         self.mesh_vertices[:,2] = self.mesh_vertices_0[:,2] + self.sed_diff_z
 
-    def buildMesh(self,tti):
+    def buildMesh(self,tti:int):
         """Construct a new mesh at the given time index tti, and determine the vertex re-indexing induced by dolfinx
         """        
         self.tti = tti
-        print("buildVertices")
         self.buildVertices(time_index=tti, useFakeEncodedZ=True)
-        print("constructMesh")
+        logger.info("Built vertices")
         self.constructMesh()
-        print("updatemesh")
+        logger.info("Built mesh")
         self.updateMesh(tti)
-        # self.buildVertices(time_index=tti, useFakeEncodedZ=False)
-        # self.updateVertices()        
+        logger.info("Updated vertices")
+     
 
-    def updateMesh(self,tti):
+    def updateMesh(self,tti:int):
         """Construct the mesh positions at the given time index tti, and update the existing mesh with the new values
         """   
         assert self.mesh is not None
@@ -568,15 +556,13 @@ class UniformNodeGridFixedSizeMeshModel:
             cell_data={"layer": [ (np.array(cell_data_layerID, dtype=np.float64)+3)*1e7 + np.array(node_index, dtype=np.float64) ] },
         )
         
-        # mesh.write( "mesh/"+self.modelName+"_mesh.vtk")
 
         fn = self.modelName+"_mesh.xdmf"
-        print("saving")  
+ 
         mesh.write( fn )
-        print("saved mesh")             
+        logger.info(f"saved mesh to {fn}")             
         enc = dolfinx.io.XDMFFile.Encoding.HDF5
         with dolfinx.io.XDMFFile(MPI.COMM_SELF, fn, "r", encoding=enc) as file:
-
             self.mesh = file.read_mesh(name="Grid" )
             aa=file.read_meshtags(self.mesh, name="Grid")
             self.cell_data_layerID = np.floor(aa.values.copy()*1e-7)-3
@@ -632,6 +618,7 @@ class UniformNodeGridFixedSizeMeshModel:
         entities = dolfinx.mesh.locate_entities(self.mesh, 3, boundary )
         tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh, 3, entities, False)
         self.layer_id_per_vertex = [ [] for _ in range(self.mesh.geometry.x.shape[0]) ]
+        ## TODO vectorize and use function from Forward model
         for i,t in enumerate(tet):
             lidval = int(self.layerIDsFcn.x.array[i])
             if (lidval<0):
@@ -656,6 +643,7 @@ class UniformNodeGridFixedSizeMeshModel:
             
             cond_local = self.kForLayerID(lidval, self.node_index[i])
             temperature_C = np.mean(np.array([ self.uh.x.array[ti] for ti in t]))
+
             temperature_K = 273.15 + temperature_C
             conductivity_effective = 1.84 + 358 * ( (1.0227*cond_local)-1.882) * ((1/temperature_K)-0.00068)
             conductivity_effective = conductivity_effective * (1.0-mean_porosity) # * np.sqrt(1-mean_porosity)
@@ -667,11 +655,9 @@ class UniformNodeGridFixedSizeMeshModel:
         # self.rhpFcn.x.array[:] = np.multiply( self.rhp0.x.array[:], (1.0-self.mean_porosity.x.array[:]) )
         self.rhpFcn.x.array[:] = np.multiply( self.rhp0.x.array[:], 1.0 )
 
-    def getCellMidpoints(self):
-        import dolfinx     
+    def getCellMidpoints(self):  
         def boundary(x):
             return np.full(x.shape[1], True)
-
         entities = dolfinx.mesh.locate_entities(self.mesh, 3, boundary )
         tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh, 3, entities, False)
         self.layer_id_per_vertex = [ [] for _ in range(self.mesh.geometry.x.shape[0]) ]
@@ -790,7 +776,7 @@ class UniformNodeGridFixedSizeMeshModel:
             (to be re-designed?)
         """ 
         UniformNodeGridFixedSizeMeshModel.point_bottom_vertex_map = {}
-        v_per_n = int(len(self.mesh_vertices) / self.num_nodes)
+        #v_per_n = int(len(self.mesh_vertices) / self.num_nodes)
         for i in range(self.mesh.geometry.x.shape[0]):
             p = self.mesh.geometry.x[i,:]
             fkey = self.floatKey2D(p+[2e-2, 2e-2,0.0])
@@ -869,7 +855,7 @@ class UniformNodeGridFixedSizeMeshModel:
         xdmf.write_function(self.layerIDsFcn, tti)
         xdmf.write_function(self.u_n, tti)
 
-    def setupSolverAndSolve(self, time_step=-1, no_steps=100, skip_setup = False, initial_state_model = None):
+    def setupSolverAndSolve(self, n_steps:int=100, time_step:int=-1, skip_setup:bool = False, initial_state_model = None):
         """ Sets up the function spaces, output functions, input function (kappa values), boundary conditions, initial conditions.
             Sets up the heat equation in dolfinx, and solves the system in time for the given number of steps.
             
@@ -911,14 +897,13 @@ class UniformNodeGridFixedSizeMeshModel:
         self.thermalCond, self.c_rho, self.layerIDsFcn, self.rhpFcn = self.buildKappaAndLayerIDs()
         assert not np.any(np.isnan(self.thermalCond.x.array))
         
-        # self.updateSedimentsConductivity()
         self.sedimentsConductivitySekiguchi()
 
         self.bc = self.buildDirichletBC()
 
         t=0
         dt = time_step if (time_step>0) else  3600*24*365 * 5000000
-        num_steps = no_steps
+        num_steps = n_steps
 
         #
         #  solver setup, see:
@@ -932,15 +917,16 @@ class UniformNodeGridFixedSizeMeshModel:
 
         # source = self.globalSediments.rhp[self.numberOfSediments-1]  * 1e-6   # conversion from uW/m^3
         # f = dolfinx.fem.Constant(self.mesh, PETSc.ScalarType(source))  # source term 
-        f = self.rhpFcn # * 1e-6   # conversion from uW/m^3
-        print("mean RHP", np.mean(self.rhpFcn.x.array[:]))
+        f = self.rhpFcn 
+        logger.info(f"mean RHP {np.mean(self.rhpFcn.x.array[:])}")
+
 
         if ( self.useBaseFlux ):
             # baseFlux = 0.03 if (self.tti>50) else 0.03 
             baseFlux = self.baseFluxMagnitude
             # define Neumann condition: constant flux at base
             # expression g defines values of Neumann BC (heat flux at base)
-            x = ufl.SpatialCoordinate(self.mesh)
+            #x = ufl.SpatialCoordinate(self.mesh)
             domain_c = dolfinx.fem.Function(self.V)
             if (self.CGorder>1):
                 def marker(x):
@@ -948,15 +934,17 @@ class UniformNodeGridFixedSizeMeshModel:
                     return x[2,:]>3990
                 facets = dolfinx.mesh.locate_entities_boundary(self.mesh, dim=(self.mesh.topology.dim - 2),
                                         marker=marker )
-                print(type(facets), facets.shape)
+                #print(type(facets), facets.shape)
                 dofs = dolfinx.fem.locate_dofs_topological(V=self.V, entity_dim=1, entities=facets)
-                print( type(dofs), len(dofs))
-                print(facets.shape, dofs.shape)
+                #print( type(dofs), len(dofs))
+                #print(facets.shape, dofs.shape)
                 if (len(facets)>0):
-                    print( np.amax(facets))
+                    #print( np.amax(facets))
+                    pass
                 if (len(dofs)>0):
-                    print( np.amax(dofs))
-                print(type(domain_c.x.array), len(domain_c.x.array))
+                    #print( np.amax(dofs))
+                    pass
+                #print(type(domain_c.x.array), len(domain_c.x.array))
                 domain_c.x.array[ dofs ] = 1
             else:
                 basepos = self.getBaseAtMultiplePos(self.mesh.geometry.x[:,0], self.mesh.geometry.x[:,1])
@@ -1298,7 +1286,7 @@ class UniformNodeGridFixedSizeMeshModel:
                         print("PING V V", point)
                         def boundary(x):
                             return np.full(x.shape[1], True)
-                        entities = dolfinx.mesh.locate_entities(self.mesh, 3, boundary )
+                        #entities = dolfinx.mesh.locate_entities(self.mesh, 3, boundary )
                         breakpoint()
                     points_on_proc.append(point)
                     points_cells.append(cell_candidates.links(i)[0])
@@ -1330,11 +1318,11 @@ class UniformNodeGridFixedSizeMeshModel:
         return False
 
 
-def run( model:Model, run_simulation=True, start_time=182, end_time=0, out_dir = "out-mapA/"):
+def run_3d( builder:Builder, parameters:Parameters, run_simulation=True, start_time=182, end_time=0, out_dir = "out-mapA/"):
 
-
+    builder=interpolate_all_nodes(builder)
     nums = 4
-    dt = 314712e8 / nums
+    dt = parameters.myr2s / nums # time step is 1/4 of 1Ma
 
     mms2 = []
     mms_tti = []
@@ -1352,7 +1340,7 @@ def run( model:Model, run_simulation=True, start_time=182, end_time=0, out_dir =
         rebuild_mesh = (tti==start_time)
         if rebuild_mesh:
             print("Rebuild/reload mesh at tti=", tti)          
-            mm2 = UniformNodeGridFixedSizeMeshModel(model, modelName="test"+str(tti))
+            mm2 = UniformNodeGridFixedSizeMeshModel(builder, parameters)
             print("builing")
             mm2.buildMesh(tti)
             print("done")
@@ -1363,12 +1351,12 @@ def run( model:Model, run_simulation=True, start_time=182, end_time=0, out_dir =
         print("===",tti,"=========== ")
         if ( len(mms2) == 0):
             tic()
-            mm2.setupSolverAndSolve(no_steps=40, time_step = 314712e8 * 2e2, skip_setup=False)   
+            mm2.setupSolverAndSolve(n_steps=40, time_step = 314712e8 * 2e2, skip_setup=False)   
             time_solve = time_solve + toc(msg="setup solver and solve")
         else:    
             tic()
             # mm2.setupSolverAndSolve( initial_state_model=mms2[-1], no_steps=nums, time_step=dt, skip_setup=(not rebuild_mesh))
-            mm2.setupSolverAndSolve( no_steps=nums, time_step=dt, skip_setup=(not rebuild_mesh))
+            mm2.setupSolverAndSolve( n_steps=nums, time_step=dt, skip_setup=(not rebuild_mesh))
             time_solve = time_solve + toc(msg="setup solver and solve")
         # subvolumes.append(mm2.evaluateVolumes())
         if (writeout):

@@ -1586,11 +1586,7 @@ class Forward_model:
             mean_porosity_arr, self.current_node.sediments["solidus"].values[sed_idx_arr])
         conductivity_sed = self._sediment_conductivity_sekiguchi(
             mean_porosity_arr, self.current_node.sediments["k_cond"].values[sed_idx_arr],Tsed)
-        if (self.current_node.X==12150) and (self.current_node.Y==12000):
-            print("conductivity_sed", conductivity_sed[0:20], conductivity_sed[-20:] )
-            # print("conductivity_sed", np.mean(conductivity_sed), np.nanmin(conductivity_sed),np.nanmax(conductivity_sed)  )
-            # print("conductivity_sed", np.mean(xsed), np.nanmin(xsed),np.nanmax(xsed)  )
-            print("conductivity_sed", len(conductivity_sed), len(xsed))
+
 
         conductivity_crust_lith = self._build_crust_lithosphere_properties(
             coord_crust_lith, hc, hLith, self.current_node.kCrust, self.current_node.kLith, self.current_node.kAsth)

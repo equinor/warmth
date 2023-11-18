@@ -650,7 +650,7 @@ class UniformNodeGridFixedSizeMeshModel:
 
             self.thermalCond.x.array[i] = conductivity_effective
             self.mean_porosity.x.array[i] = mean_porosity
-            self.c_rho.x.array[i] = 1000*((self.c_rho0.x.array[i]/1000) * (1-mean_porosity) + mean_porosity*1000)
+            self.c_rho.x.array[i] = self._parameters.cp*((self.c_rho0.x.array[i]/self._parameters.cp) * (1-mean_porosity) + mean_porosity*self._parameters.rhowater)
 
         # self.rhpFcn.x.array[:] = np.multiply( self.rhp0.x.array[:], (1.0-self.mean_porosity.x.array[:]) )
         self.rhpFcn.x.array[:] = np.multiply( self.rhp0.x.array[:], 1.0 )

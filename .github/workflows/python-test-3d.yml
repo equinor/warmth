@@ -30,6 +30,7 @@ jobs:
         args: |
           bash -c "cd /home/warmth" && pip install . pytest==7.4.2 pytest-cov==4.1.0 && pytest --cov-report=term-missing --cov=warmth tests | tee pytest-coverage.txt
 
+
     - name: Comment coverage
       if: ${{ github.event_name == 'pull_request' && github.event.action == 'opened' }}
       uses: coroo/pytest-coverage-commentator@v1.0.2

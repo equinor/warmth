@@ -30,7 +30,7 @@ jobs:
         args: |
           cd /warmth && \
           pip install pytest==7.4.2 pytest-cov==4.1.0 . && \
-          pytest --cov-report=term-missing --cov=warmth tests/ | tee pytest-coverage.txt
+          pytest --cov-report=term-missing --cov=warmth tests/warmth3d | tee pytest-coverage.txt
 
 
     - name: Comment coverage

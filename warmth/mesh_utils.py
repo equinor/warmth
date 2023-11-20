@@ -1,6 +1,8 @@
 from dataclasses import dataclass
-
-from warmth.build import single_node
+from typing import List
+import itertools
+import numpy as np
+from .build import Builder, single_node
 
 @dataclass
 class NodeGrid:
@@ -110,3 +112,81 @@ def volumeOfTet(points):
     cd = points[2]-points[3]
     bdcd = np.cross(bd,cd)
     return np.linalg.norm(np.dot(ad,bdcd))/6
+
+def interpolateNode(interpolationNodes: List[single_node], interpolationWeights=None) -> single_node:
+    assert len(interpolationNodes)>0
+    if interpolationWeights is None:
+        interpolationWeights = np.ones([len(interpolationNodes),1])
+    assert len(interpolationNodes)==len(interpolationWeights)
+    wsum = np.sum(np.array(interpolationWeights))
+    iWeightNorm = [ w/wsum for w in interpolationWeights]
+
+    node = single_node()
+    node.__dict__.update(interpolationNodes[0].__dict__)
+    node.X = np.sum( np.array( [node.X * w for node,w in zip(interpolationNodes,iWeightNorm)] ) ) 
+    node.Y = np.sum( np.array( [node.Y * w for node,w in zip(interpolationNodes,iWeightNorm)] ) )
+
+    times = range(node.result._depth.shape[1])
+    if node.subsidence is None:
+        node.subsidence = np.sum( np.array( [ [node.result.seabed(t) for t in times] * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
+    if node.crust_ls is None:
+        node.crust_ls = np.sum( np.array( [ [node.result.crust_thickness(t) for t in times] * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
+    if node.lith_ls is None:
+        node.lith_ls = np.sum( np.array( [ [node.result.lithosphere_thickness(t) for t in times] * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
+
+    if node.beta is None:
+        node.beta = np.sum( np.array( [node.beta * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
+    if node.kAsth is None:
+        node.kAsth = np.sum( np.array( [node.kAsth * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
+    if node.kLith is None:
+        node.kLith = np.sum( np.array( [node.kLith * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
+    if node._depth_out is None:
+        node._depth_out = np.sum([node.result._depth_out*w for n,w in zip(interpolationNodes[0:1], [1] )], axis=0)
+    if node.temperature_out is None:
+        node.temperature_out = np.sum([n.result.temperature_out*w for n,w in zip(interpolationNodes[0:1], [1] )], axis=0)
+
+    if node.sed is None:
+        node.sed = np.sum([n.sed*w for n,w in zip(interpolationNodes,iWeightNorm)], axis=0)
+    if node.sed_thickness_ls is None:
+        node.sed_thickness_ls =  node.sed[-1,1,:] - node.sed[0,0,:]    
+    return node
+
+
+def interpolate_all_nodes(builder:Builder)->Builder:
+    for ni in range(len(builder.nodes)):
+        for nj in range(len(builder.nodes[ni])):
+            if builder.nodes[ni][nj] is False:
+                closest_x_up = []
+                for j in range(ni,len(builder.nodes[nj])):
+                    matching_x = [ i[0] for i in builder.indexer_full_sim if i[0]==j ]
+                    closest_x_up = closest_x_up + list(set(matching_x))
+                    if len(matching_x)>0:
+                        break
+                closest_x_down = []
+                for j in range(ni-1,-1,-1):
+                    matching_x = [ i[0] for i in builder.indexer_full_sim if i[0]==j ]
+                    closest_x_down = closest_x_down + list(set(matching_x))
+                    if len(matching_x)>0:
+                        break
+                closest_y_up = []
+                for j in range(nj,len(builder.nodes[ni])):
+                    matching_y = [ i[1] for i in builder.indexer_full_sim if (i[1]==j and ((i[0] in closest_x_up) or i[0] in closest_x_down)) ]
+                    closest_y_up = closest_y_up + list(set(matching_y))
+                    if len(matching_y)>0:
+                        break
+                closest_y_down = []
+                for j in range(nj-1,-1,-1):
+                    matching_y = [ i[1] for i in builder.indexer_full_sim if (i[1]==j and (i[0] in closest_x_up or i[0] in closest_x_down) ) ]
+                    closest_y_down = closest_y_down + list(set(matching_y))
+                    if len(matching_y)>0:
+                        break
+
+                interpolationNodes = [  builder.nodes[i[0]][i[1]] for i in itertools.product(closest_x_up+closest_x_down, closest_y_up+closest_y_down)  ]
+                interpolationNodes = [nn for nn in interpolationNodes if nn is not False]
+                node = interpolateNode(interpolationNodes)
+                node.X, node.Y = builder.grid.location_grid[ni,nj,:]
+                builder.nodes[ni][nj] = node
+            else:
+                node = interpolateNode([builder.nodes[ni][nj]])  # "interpolate" the node from itself to make sure the same member variables exist at the end
+                builder.nodes[ni][nj] = node
+    return builder

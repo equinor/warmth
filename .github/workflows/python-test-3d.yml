@@ -24,7 +24,7 @@ jobs:
     - name: Run
       uses: tj-actions/docker-run@v2
       with:
-        image: dolfinx/dolfinx:v0.6.0
+        image: ghcr.io/equinor/warmth:latest
         name: dolfinx
         options: -v ${{ github.workspace }}:/warmth
         args: |

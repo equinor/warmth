@@ -2,16 +2,13 @@ from typing import Tuple
 import numpy as np
 from mpi4py import MPI
 import meshio
-from pyparsing import Literal
 import dolfinx  
 from petsc4py import PETSc
 import ufl
 from scipy.interpolate import LinearNDInterpolator
-
+from progress.bar import Bar
 from warmth.build import single_node, Builder
-from warmth.forward_modelling import Forward_model
 from .parameters import Parameters
-from .model import Model
 from warmth.logging import logger
 from .mesh_utils import  top_crust,top_sed,thick_crust,  top_lith, top_asth, top_sed_id, bottom_sed_id,interpolate_all_nodes
 from .resqpy_helpers import write_tetra_grid_with_properties, write_hexa_grid_with_properties,read_mesh_resqml_hexa
@@ -813,8 +810,6 @@ class UniformNodeGridFixedSizeMeshModel:
             dofs_D = dolfinx.fem.locate_dofs_geometrical(self.V, boundary_D_top_bottom)
         u_bc = dolfinx.fem.Function(self.V)
         u_bc.interpolate(self.TemperatureGradient)
-        print("buildDirichletBC", np.amin(u_bc.x.array), np.amax(u_bc.x.array) )
-        # u_bc.interpolate(self.TemperatureStep)
         bc = dolfinx.fem.dirichletbc(u_bc, dofs_D)
         return bc
 
@@ -835,7 +830,6 @@ class UniformNodeGridFixedSizeMeshModel:
         xdmf = dolfinx.io.XDMFFile(MPI.COMM_WORLD, outfilename, "w")
         xdmf.write_mesh(self.mesh)
         xdmf.write_function(self.porosity0, tti)
-        # xdmf.write_function(self.thermalCond, tti)
 
     def writeTemperatureFunction(self, outfilename, tti=0):
         """ Writes the mesh and the current temperature solution to the given output file in XDMF format
@@ -914,9 +908,6 @@ class UniformNodeGridFixedSizeMeshModel:
         v = ufl.TestFunction(self.V)
 
         a = self.c_rho*u*v*ufl.dx + dt*ufl.dot(self.thermalCond*ufl.grad(u), ufl.grad(v)) * ufl.dx
-
-        # source = self.globalSediments.rhp[self.numberOfSediments-1]  * 1e-6   # conversion from uW/m^3
-        # f = dolfinx.fem.Constant(self.mesh, PETSc.ScalarType(source))  # source term 
         f = self.rhpFcn 
         logger.info(f"mean RHP {np.mean(self.rhpFcn.x.array[:])}")
 
@@ -1318,57 +1309,49 @@ class UniformNodeGridFixedSizeMeshModel:
         return False
 
 
-def run_3d( builder:Builder, parameters:Parameters, run_simulation=True, start_time=182, end_time=0, out_dir = "out-mapA/"):
-
+def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0, out_dir = "out-mapA/",sedimentsOnly=False,writeout=True):
     builder=interpolate_all_nodes(builder)
     nums = 4
     dt = parameters.myr2s / nums # time step is 1/4 of 1Ma
-
     mms2 = []
     mms_tti = []
-
     tti = 0
-    subvolumes = []
-   
-    writeout = True
 
-    if not run_simulation:
-        return
     time_solve = 0.0    
-    
-    for tti in range(start_time, end_time-1,-1): #start from oldest
-        rebuild_mesh = (tti==start_time)
-        if rebuild_mesh:
-            print("Rebuild/reload mesh at tti=", tti)          
-            mm2 = UniformNodeGridFixedSizeMeshModel(builder, parameters)
-            print("builing")
-            mm2.buildMesh(tti)
-            print("done")
-        else:
-            print("Re-generating mesh vertices at tti=", tti)
-            mm2.updateMesh(tti)
-
-        print("===",tti,"=========== ")
-        if ( len(mms2) == 0):
-            tic()
-            mm2.setupSolverAndSolve(n_steps=40, time_step = 314712e8 * 2e2, skip_setup=False)   
-            time_solve = time_solve + toc(msg="setup solver and solve")
-        else:    
-            tic()
-            # mm2.setupSolverAndSolve( initial_state_model=mms2[-1], no_steps=nums, time_step=dt, skip_setup=(not rebuild_mesh))
-            mm2.setupSolverAndSolve( n_steps=nums, time_step=dt, skip_setup=(not rebuild_mesh))
-            time_solve = time_solve + toc(msg="setup solver and solve")
-        # subvolumes.append(mm2.evaluateVolumes())
-        if (writeout):
-            tic()
-            mm2.writeLayerIDFunction(out_dir+"LayerID-"+str(tti)+".xdmf", tti=tti)
-            mm2.writeTemperatureFunction(out_dir+"Temperature-"+str(tti)+".xdmf", tti=tti)
-            # mm2.writeOutputFunctions(out_dir+"test4-"+str(tti)+".xdmf", tti=tti)
-            toc(msg="write function")
-        mms2.append(mm2)
-        mms_tti.append(tti)
+    with Bar('Processing...',check_tty=False, max=(start_time-end_time)) as bar:
+        for tti in range(start_time, end_time-1,-1): #start from oldest
+            rebuild_mesh = (tti==start_time)
+            if rebuild_mesh:
+                logger.info(f"Rebuild/reload mesh at {tti}")          
+                mm2 = UniformNodeGridFixedSizeMeshModel(builder, parameters,sedimentsOnly)
+                mm2.buildMesh(tti)
+            else:
+                logger.info(f"Re-generating mesh vertices at {tti}")
+                mm2.updateMesh(tti)
+            logger.info(f"Solving {tti}")
+        
+            if ( len(mms2) == 0):
+                tic()
+                mm2.setupSolverAndSolve(n_steps=40, time_step = 314712e8 * 2e2, skip_setup=False)   
+                time_solve = time_solve + toc(msg="setup solver and solve")
+            else:    
+                tic()
+                mm2.setupSolverAndSolve( n_steps=nums, time_step=dt, skip_setup=(not rebuild_mesh))
+                time_solve = time_solve + toc(msg="setup solver and solve")
+            if (writeout):
+                tic()
+                mm2.writeLayerIDFunction(out_dir+"LayerID-"+str(tti)+".xdmf", tti=tti)
+                mm2.writeTemperatureFunction(out_dir+"Temperature-"+str(tti)+".xdmf", tti=tti)
+                # mm2.writeOutputFunctions(out_dir+"test4-"+str(tti)+".xdmf", tti=tti)
+                toc(msg="write function")
+            
+            mms2.append(mm2)
+            mms_tti.append(tti)
+            logger.info(f"Simulated time step {tti}")
+            bar.next()
     print("total time solve: " , time_solve)
-    EPCfilename = mm2.write_hexa_mesh_resqml("temp/")
-    print("RESQML model written to: " , EPCfilename)
-    read_mesh_resqml_hexa(EPCfilename)  # test reading of the .epc file
+    if (writeout):
+        EPCfilename = mm2.write_hexa_mesh_resqml("temp/")
+        print("RESQML model written to: " , EPCfilename)
+        read_mesh_resqml_hexa(EPCfilename)  # test reading of the .epc file
     return mm2

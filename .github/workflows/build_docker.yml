@@ -35,8 +35,6 @@ jobs:
       name: Build
       uses: docker/build-push-action@v2
       with:
-        file: Dockerfile
-        context: .devcontainer
         push: true
         platforms: linux/amd64
         tags: ghcr.io/equinor/warmth:latest

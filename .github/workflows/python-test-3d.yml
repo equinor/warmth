@@ -26,11 +26,9 @@ jobs:
       with:
         image: dolfinx/dolfinx:v0.6.0
         name: dolfinx
-        options: -v ${{ github.workspace }}:/warmth
+        options: -v ${{ github.workspace }}:/home/warmth
         args: |
-          cd /warmth && \
-          pip install pytest==7.4.2 pytest-cov==4.1.0 . && \
-          pytest --cov-report=term-missing --cov=warmth tests/ | tee pytest-coverage.txt
+          bash -c "cd /home/warmth" && pip install . pytest==7.4.2 pytest-cov==4.1.0 && pytest --cov-report=term-missing --cov=warmth tests | tee pytest-coverage.txt
 
 
     - name: Comment coverage

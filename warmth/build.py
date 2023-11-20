@@ -668,6 +668,7 @@ class Builder:
             for future in concurrent.futures.as_completed(futures):
                 sed = future.result()  # This will also raise any exceptions
                 sediments_all.append(sed)
+
         self._create_nodes(sediments_all)
 
         return
@@ -681,54 +682,61 @@ class Builder:
             Extracted sediment objects
         """
         indexer = self.grid.indexing_arr
+
+
         for index in indexer:
+
             if self.nodes[index[0]][index[1]] != False:
                 node_sed: list[_sediment_layer_] = []
                 for sed_grid in all_sediments_grid:
                     node_sed.append(sed_grid[index[0]][index[1]])
-                top = np.empty(0)
-                topage = np.empty(0)
-                k_cond = np.empty(0)
-                rhp = np.empty(0)
-                phi = np.empty(0)
-                decay = np.empty(0)
-                solidus = np.empty(0)
-                liquidus = np.empty(0)
-                strat = np.empty(0,dtype=str)
-                inputRef = np.empty(0,dtype=int)
-                for hor in node_sed:
-                    top = np.append(top, float(hor.top))
-                    topage = np.append(topage, int(hor.topage))
-                    k_cond = np.append(k_cond, float(hor.thermoconductivity))
-                    rhp = np.append(rhp, float(hor.rhp))
-                    phi = np.append(phi, float(hor.phi))
-                    decay = np.append(decay, float(hor.decay))
-                    solidus = np.append(solidus, float(hor.solidus))
-                    liquidus = np.append(liquidus, float(hor.liquidus))
-                    strat = np.append(strat,hor.strat)
-                    inputRef= np.append(inputRef,hor.horizon_index)
-
-       
-                df = pd.DataFrame({'top': top, 'topage': topage, 'k_cond': k_cond,
-                                            'rhp': rhp, 'phi': phi, 'decay': decay, 'solidus': solidus, 'liquidus': liquidus,'strat':strat,'horizonIndex':inputRef})
-                df = df.sort_values(by=["topage"],ignore_index=True)
-
-
-                #df.reset_index(drop=True,inplace=True)
-                df.at[2, 'top'] = np.nan
-        
-                df.at[3, 'top'] = np.nan
-                checker = self._check_nan_sed(df)
-                if checker is False:
-                    self.nodes[index[0]][index[1]] = False
+                if all(node_sed) is False:
+                    logger.warning(f"dropping node {index}. One of the layer has no dpeth value")
                 else:
-                    df = self._fix_nan_sed(df)
-                    n = single_node()
-                    n.X=node_sed[0].X
-                    n.Y=node_sed[0].Y
-                    n.sediments_inputs=df
-                    n.indexer = index
-                    self.nodes[index[0]][index[1]] = n
+                    top = np.empty(0)
+                    topage = np.empty(0)
+                    k_cond = np.empty(0)
+                    rhp = np.empty(0)
+                    phi = np.empty(0)
+                    decay = np.empty(0)
+                    solidus = np.empty(0)
+                    liquidus = np.empty(0)
+                    strat = np.empty(0,dtype=str)
+                    inputRef = np.empty(0,dtype=int)
+                    for hor in node_sed:
+                        top = np.append(top, float(hor.top))
+                        topage = np.append(topage, int(hor.topage))
+                        k_cond = np.append(k_cond, float(hor.thermoconductivity))
+                        rhp = np.append(rhp, float(hor.rhp))
+                        phi = np.append(phi, float(hor.phi))
+                        decay = np.append(decay, float(hor.decay))
+                        solidus = np.append(solidus, float(hor.solidus))
+                        liquidus = np.append(liquidus, float(hor.liquidus))
+                        strat = np.append(strat,hor.strat)
+                        inputRef= np.append(inputRef,hor.horizon_index)
+
+        
+                    df = pd.DataFrame({'top': top, 'topage': topage, 'k_cond': k_cond,
+                                                'rhp': rhp, 'phi': phi, 'decay': decay, 'solidus': solidus, 'liquidus': liquidus,'strat':strat,'horizonIndex':inputRef})
+                    df = df.sort_values(by=["topage"],ignore_index=True)
+
+    
+                    #df.reset_index(drop=True,inplace=True)
+                    df.at[2, 'top'] = np.nan
+            
+                    df.at[3, 'top'] = np.nan
+                    checker = self._check_nan_sed(df)
+
+                    if checker is False:
+                        self.nodes[index[0]][index[1]] = False
+                    else:
+                        df = self._fix_nan_sed(df)
+                        n = single_node()
+                        n.X=node_sed[0].X
+                        n.Y=node_sed[0].Y
+                        n.sediments_inputs=df
+                        n.indexer = index
+                        self.nodes[index[0]][index[1]] = n
             else:
                 pass
         return

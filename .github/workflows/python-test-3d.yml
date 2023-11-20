@@ -4,6 +4,7 @@
 name: Tests3D
  
 on:
+  workflow_dispatch:
   workflow_call:
     inputs:
       event_type:
@@ -23,14 +24,13 @@ jobs:
     - name: Run
       uses: tj-actions/docker-run@v2
       with:
-        image: dolfinx/dolfinx:v0.7.0
+        image: dolfinx/dolfinx:v0.6.0
         name: dolfinx
         options: -v ${{ github.workspace }}:/warmth
         args: |
-          cd /warmth
-          pip install .
-          pip install pytest==7.4.2 pytest-cov==4.1.0
-          pytest --cov-report=term-missing --cov=warmth/3d tests/3d | tee pytest-coverage.txt
+          cd /warmth && \
+          pip install pytest==7.4.2 pytest-cov==4.1.0 . && \
+          pytest --cov-report=term-missing --cov=warmth tests/ | tee pytest-coverage.txt
 
 
     - name: Comment coverage

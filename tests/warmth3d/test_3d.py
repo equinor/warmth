@@ -1,20 +1,20 @@
-if __name__ ==  '__main__':
-    import warmth
-    from pathlib import Path
+import warmth
+from pathlib import Path
+from warmth.mesh_model import run_3d
+import os
+import numpy as np
 
+def test_3d_compare():
     maps_dir = Path("./docs/notebooks/data/")
     model = warmth.Model()
 
     inputs = model.builder.input_horizons_template
-    import os
-    print(os.getcwd())
+  
     #Add surface grids to the table. You can use other method as well
     inputs.loc[0]=[0,"0.gri",None,"Onlap"]
     inputs.loc[1]=[66,"66.gri",None,"Onlap"]
     inputs.loc[2]=[100,"100.gri",None,"Onlap"]
     inputs.loc[3]=[163,"163.gri",None,"Erosive"]
-    inputs.loc[4]=[168,"168.gri",None,"Erosive"]
-    inputs.loc[5]=[170,"170.gri",None,"Onlap"]
     inputs.loc[6]=[182,"182.gri",None,"Erosive"]
     model.builder.input_horizons=inputs
 
@@ -34,8 +34,7 @@ if __name__ ==  '__main__':
         #
         i.bflux = False
         i.adiab = 0.3e-3
-        # i.crustRHP = 0.0
-        # i.sediments['rhp']=[0,0,0,0,0,0]
+
 
     model.simulator.simulate_every = 1
 
@@ -52,8 +51,7 @@ if __name__ ==  '__main__':
 
 
 
-    from warmth.mesh_model import run_3d
-    import os
+
     try:
         os.mkdir('mesh')
     except FileExistsError:
@@ -62,9 +60,9 @@ if __name__ ==  '__main__':
         os.mkdir('temp')
     except FileExistsError:
         pass
-    mm2 = run_3d(model.builder,model.parameters,start_time=model.parameters.time_start,end_time=0)
-    print("done simulation")
-    import numpy as np
+    mm2 = run_3d(model.builder,model.parameters,start_time=model.parameters.time_start,end_time=0,writeout=False)
+
+    
     hx = model.builder.grid.num_nodes_x // 2
     hy = model.builder.grid.num_nodes_y // 2
     # hx = model.builder.grid.num_nodes_x - 1 - pad
@@ -95,3 +93,5 @@ if __name__ ==  '__main__':
 
 
 
+if __name__ == "__main__":
+    test_3d_compare()

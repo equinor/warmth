@@ -1,13 +1,10 @@
 
-import os
-import multiprocessing
 from pathlib import Path
-import sys
 
 import warmth
 
 
-maps_dir = Path("./docs/data/mapA")
+maps_dir = Path("./docs/notebooks/data/")
 
 model = warmth.Model()
 
@@ -52,7 +49,6 @@ for index in model.builder.grid.indexing_arr:
 
 model.simulator.run(save=False,purge=True)
 
-# %%
 for i in model.builder.iter_node():
     if i is not False:
         print(i.result.heatflow(0))

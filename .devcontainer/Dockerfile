@@ -1,8 +1,7 @@
 FROM dolfinx/dolfinx:v0.6.0
 # FROM mcr.microsoft.com/devcontainers/base:jammy 
 ARG DEBIAN_FRONTEND=noninteractive
-# RUN useradd -ms /bin/bash vscode
-# ARG USER=vscode
+
 
 RUN DEBIAN_FRONTEND=noninteractive \
     && apt-get update \ 
@@ -35,7 +34,11 @@ RUN DEBIAN_FRONTEND=noninteractive \
 # # Use poetry pyenv
 # #ENV PYENV_ROOT="${HOME}/.pyenv"
 # #ENV PATH="${PYENV_ROOT}/shims:${PYENV_ROOT}/bin:${HOME}/.local/bin:/root/.local/bin:$PATH"
-ENV PATH="/root/.local/bin:$PATH"
+RUN useradd  -rm -d /home/vscode -s /bin/bash -g root -G sudo -u 1000 vscode -p ""
+USER vscode
+WORKDIR /home/vscode
+ENV HOME=/home/vscode
+ENV PATH="/root/.local/bin:$HOME/.local/bin::$PATH"
 RUN echo "done 0" \
 #     # && curl https://pyenv.run | bash \
 #     # && echo "done 1" \

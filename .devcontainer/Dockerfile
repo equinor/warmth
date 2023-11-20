@@ -25,7 +25,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
         liblzma-dev
 
 RUN useradd  -rm -d /home/vscode -s /bin/bash -g root -G sudo -u 1000 vscode -p ""
-USER 1000
+USER vscode
 WORKDIR /home/vscode
 ENV HOME=/home/vscode
 ENV PATH="/root/.local/bin:$HOME/.local/bin::$PATH"

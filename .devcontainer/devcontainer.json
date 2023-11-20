@@ -1,8 +1,6 @@
 {
-	"name": "poetry3-poetry-pyenv",
-	"build": {
-		"dockerfile": "Dockerfile"
-	},
+	"name": "warmth dolfinx poetry",
+	"image": "ghcr.io/equinor/warmth:latest",
 
 	// 👇 Features to add to the Dev Container. More info: https://containers.dev/implementors/features.
 	// "features": {},

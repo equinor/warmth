@@ -21,8 +21,17 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: check_3d_modified
+      uses: dorny/paths-filter@v2
+      id: filter3d
+      with:
+        filters: |
+          mesh3d:
+            - 'warmth/warmth3d/**'
+      
     - name: Run
       uses: tj-actions/docker-run@v2
+      if: ${{ steps.filter3d.outputs.mesh3d }} == 'true'
       with:
         image: ghcr.io/equinor/warmth:latest
         name: dolfinx
@@ -30,7 +39,7 @@ jobs:
 
 
     - name: Comment coverage
-      if: ${{ github.event_name == 'pull_request' && github.event.action == 'opened' }}
+      if: ${{ github.event_name == 'pull_request' && github.event.action == 'opened' && steps.filter3d.outputs.mesh3d == 'true' }}
       uses: coroo/pytest-coverage-commentator@v1.0.2
       with:
         pytest-coverage: pytest-coverage.txt

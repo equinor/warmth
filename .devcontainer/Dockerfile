@@ -24,9 +24,9 @@ RUN DEBIAN_FRONTEND=noninteractive \
         libffi-dev \
         liblzma-dev
 
-RUN useradd  -rm -d /home/vscode -s /bin/bash -g root -G sudo -u 1000 vscode -p ""
-USER vscode
-WORKDIR /home/vscode
-ENV HOME=/home/vscode
+# RUN useradd  -rm -d /home/vscode -s /bin/bash -g root -G sudo -u 1000 vscode -p ""
+# USER vscode
+# WORKDIR /home/vscode
+# ENV HOME=/home/vscode
 ENV PATH="/root/.local/bin:$HOME/.local/bin::$PATH"
 RUN curl -sSL https://install.python-poetry.org | python3 - 

@@ -1,8 +1,5 @@
 FROM dolfinx/dolfinx:v0.6.0
 
-LABEL org.opencontainers.image.source https://github.com/equinor/warmth
-ARG DEBIAN_FRONTEND=noninteractive
-
 RUN DEBIAN_FRONTEND=noninteractive \
     && apt-get update \ 
     && apt-get install -y build-essential --no-install-recommends make \

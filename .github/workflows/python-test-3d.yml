@@ -15,7 +15,7 @@ on:
         type: string
 jobs:
   build:
-
+    environment: test3d
     runs-on: ubuntu-latest
 
     steps:
@@ -27,8 +27,6 @@ jobs:
         image: ghcr.io/equinor/warmth:latest
         name: dolfinx
         options: -v ${{ github.workspace }}:/home/warmth
-        args: |
-          bash -c "cd /home/warmth" && pip install . pytest==7.4.2 pytest-cov==4.1.0 && pytest --cov-report=term-missing --cov=warmth tests | tee pytest-coverage.txt
 
 
     - name: Comment coverage

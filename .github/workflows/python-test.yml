@@ -53,10 +53,3 @@ jobs:
         uses: coroo/pytest-coverage-commentator@v1.0.2
         with:
           pytest-coverage: pytest-coverage.txt
-
-
-  test3d:
-    uses: equinor/warmth/.github/workflows/python-test-3d.yml@main
-    with:
-      event_type: ${{ github.event_name}}
-      action_type: ${{ github.event.action}}

@@ -1,5 +1,6 @@
 FROM dolfinx/dolfinx:v0.6.0
 
+ENV TZ=Europe/Oslo
 RUN DEBIAN_FRONTEND=noninteractive \
     && apt-get update \ 
     && apt-get install -y build-essential --no-install-recommends make \

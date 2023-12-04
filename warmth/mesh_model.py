@@ -10,7 +10,7 @@ from progress.bar import Bar
 from warmth.build import single_node, Builder
 from .parameters import Parameters
 from warmth.logging import logger
-from .mesh_utils import  top_crust,top_sed,thick_crust,  top_lith, top_asth, top_sed_id, bottom_sed_id,interpolate_all_nodes
+from .mesh_utils import  top_crust,top_sed,thick_crust,  top_lith, top_asth, top_sed_id, bottom_sed_id,interpolateNode, interpolate_all_nodes
 from .resqpy_helpers import write_tetra_grid_with_properties, write_hexa_grid_with_properties,read_mesh_resqml_hexa
 def tic():
     #Homemade version of matlab tic and toc functions
@@ -37,7 +37,7 @@ class UniformNodeGridFixedSizeMeshModel:
     point_domain_edge_map = {}
     point_top_vertex_map = {}
     point_bottom_vertex_map = {}
-    def __init__(self, builder:Builder,parameters:Parameters,  sedimentsOnly = False):
+    def __init__(self, builder:Builder,parameters:Parameters, sedimentsOnly = False, padding_num_nodes=0):
         self._builder = builder
         self._parameters=parameters
         self.node1D = [n for n in self._builder.iter_node()]
@@ -57,20 +57,41 @@ class UniformNodeGridFixedSizeMeshModel:
         self.numElemInLith = 0 if self.runSedimentsOnly else 4  # split lith hexahedron into pieces
         self.numElemInAsth = 0 if self.runSedimentsOnly else 2  # split asth hexahedron into pieces
 
-
         self.num_nodes_x = self._builder.grid.num_nodes_x
         self.num_nodes_y = self._builder.grid.num_nodes_y
-        self.convexHullEdges = []
-        for i in range(self.num_nodes_x-1):
-            edge = [i, i+1]
-            self.convexHullEdges.append(edge)
-            edge = [i+(self.num_nodes_y-1*self.num_nodes_x), i+1+(self.num_nodes_y-1*self.num_nodes_x)]
-            self.convexHullEdges.append(edge)
-        for i in range(self.num_nodes_y-1):
-            edge = [i*self.num_nodes_x, (i+1)*self.num_nodes_x]
-            self.convexHullEdges.append(edge)
-            edge = [i*self.num_nodes_x + (self.num_nodes_x-1), (i+1)*self.num_nodes_x+ (self.num_nodes_x-1)]
-            self.convexHullEdges.append(edge)
+
+        nodes_padded = []
+        self.padX = padding_num_nodes
+        for j in range(-self.padX,self.num_nodes_y+self.padX):
+            for i in range(-self.padX,self.num_nodes_x+self.padX):
+                in_padding = False
+                in_padding = (i<0) or (j<0) or (i>=self.num_nodes_x) or (j>=self.num_nodes_y)
+                if (in_padding):
+                    source_x = max(0, min(i, self.num_nodes_x-1))
+                    source_y = max(0, min(j, self.num_nodes_y-1))
+                    new_node = interpolateNode( [self._builder.nodes[source_y][source_x] ] )
+                    new_node.X = self._builder.grid.origin_x + i*self._builder.grid.step_x
+                    new_node.Y = self._builder.grid.origin_y + j*self._builder.grid.step_y
+                    nodes_padded.append(new_node)
+                else:
+                    nodes_padded.append(self._builder.nodes[j][i])
+
+        self.node1D = nodes_padded
+        self.num_nodes = len(self.node1D)
+        self.num_nodes_x = self._builder.grid.num_nodes_x + 2*self.padX
+        self.num_nodes_y = self._builder.grid.num_nodes_y + 2*self.padX
+
+        # self.convexHullEdges = []
+        # for i in range(self.num_nodes_x-1):
+        #     edge = [i, i+1]
+        #     self.convexHullEdges.append(edge)
+        #     edge = [i+(self.num_nodes_y-1*self.num_nodes_x), i+1+(self.num_nodes_y-1*self.num_nodes_x)]
+        #     self.convexHullEdges.append(edge)
+        # for i in range(self.num_nodes_y-1):
+        #     edge = [i*self.num_nodes_x, (i+1)*self.num_nodes_x]
+        #     self.convexHullEdges.append(edge)
+        #     edge = [i*self.num_nodes_x + (self.num_nodes_x-1), (i+1)*self.num_nodes_x+ (self.num_nodes_x-1)]
+        #     self.convexHullEdges.append(edge)
 
         self.useBaseFlux = False
         self.baseFluxMagnitude = 0.06
@@ -159,7 +180,7 @@ class UniformNodeGridFixedSizeMeshModel:
         for ind,val in enumerate(self.mesh_reindex):
             x_original_order[val,:] = self.mesh.geometry.x[ind,:]
             reverse_reindex_order[val] = ind
-        hexaHedra, hex_data_layerID, hex_data_nodeID = self.buildHexahedra()
+        hexaHedra, hex_data_layerID, hex_data_nodeID = self.buildHexahedra(keep_padding=False)
 
         hexa_to_keep = []
         p_to_keep = set()
@@ -227,6 +248,28 @@ class UniformNodeGridFixedSizeMeshModel:
             np.array(T_per_vertex), np.array(age_per_vertex), poro0_per_cell, decay_per_cell, density_per_cell,
             cond_per_cell, rhp_per_cell, lid_per_cell)
         return filename_hex
+
+    def heatflow_at_crust_sed_boundary(self):
+        hf_array = np.zeros([self.num_nodes_x-2*self.padX, self.num_nodes_y-2*self.padX])
+        for hy in range(self.padX, self.num_nodes_y-self.padX):
+            for hx in range(self.padX, self.num_nodes_x-self.padX):
+                v_per_n = int(self.mesh_vertices.shape[0]/(self.num_nodes_y*self.num_nodes_x))
+                ind_base_of_sed = v_per_n - self.numElemInAsth - self.numElemInLith - self.numElemInCrust -1
+                # first_ind_in_crust = v_per_n - self.numElemInAsth - self.numElemInLith - self.numElemInCrust
+
+                node_ind = hy*self.num_nodes_x + hx
+                # nn = model.builder.nodes[hy][hx]
+                nn = self.node1D[node_ind]
+                temp_3d_ind = np.array([ np.where([self.mesh_reindex==i])[1][0] for i in range(node_ind*v_per_n+ind_base_of_sed, node_ind*v_per_n+ind_base_of_sed+2 ) ] )
+                dd = self.mesh.geometry.x[temp_3d_ind,2]
+                tt = self.u_n.x.array[temp_3d_ind]
+                hf = nn.kCrust*(tt[1]-tt[0])/(dd[1]-dd[0])
+
+                hx_unpad = hx - self.padX            
+                hy_unpad = hy - self.padX            
+                hf_array[hx_unpad, hy_unpad] = hf
+        return hf_array
+
 
     def getSubsidenceAtMultiplePos(self, pos_x, pos_y):
         """Returns subsidence values at given list of x,y positions.
@@ -414,7 +457,7 @@ class UniformNodeGridFixedSizeMeshModel:
                     self.sed_diff_z.append(0.0)
                     self.mesh_vertices_age_unsorted.append(1000)
 
-                base_aest = 260000
+                base_aest = base_lith+130000 # 260000
                 for i in range(1,self.numElemInAsth+1):
                     self.mesh_vertices_0.append( [ node.X, node.Y, base_lith+(base_aest-base_lith)*(i/self.numElemInAsth) ] )
                     self.sed_diff_z.append(0.0)
@@ -439,7 +482,7 @@ class UniformNodeGridFixedSizeMeshModel:
         self.mesh0_geometry_x = self.mesh.geometry.x.copy()      
         self.mesh_vertices[:,2] = self.mesh_vertices_0[:,2] - self.sed_diff_z
         self.updateTopVertexMap()
-        if self.runSedimentsOnly: 
+        if self.runSedimentsOnly or (self.useBaseFlux): 
             self.updateBottomVertexMap()
         self.mesh_vertices[:,2] = self.mesh_vertices_0[:,2] + self.sed_diff_z
 
@@ -463,16 +506,20 @@ class UniformNodeGridFixedSizeMeshModel:
         self.buildVertices(time_index=tti, useFakeEncodedZ=False)
         self.updateVertices()        
 
-    def buildHexahedra(self):
+    def buildHexahedra(self, keep_padding=True):
         xpnum = self.num_nodes_x
         ypnum = self.num_nodes_y
+        # xpnum = self.num_nodes_x - 2* self.padX
+        # ypnum = self.num_nodes_y - 2* self.padX
 
         nodeQuads = []
         for j in range(ypnum-1):
             for i in range(xpnum-1):
-                i0 = j * (xpnum)+i
-                q = [ i0, i0+1, i0 + xpnum+1, i0 + xpnum ]
-                nodeQuads.append(q)
+                is_not_padded = (j>=self.padX) and (j<ypnum-self.padX) and (i>=self.padX) and (i<xpnum-self.padX)
+                if (keep_padding) or (is_not_padded):
+                    i0 = j * (xpnum)+i
+                    q = [ i0, i0+1, i0 + xpnum+1, i0 + xpnum ]
+                    nodeQuads.append(q)
 
         v_per_n = int(len(self.mesh_vertices) / self.num_nodes)
         assert len(self.mesh_vertices) % self.num_nodes ==0
@@ -553,8 +600,9 @@ class UniformNodeGridFixedSizeMeshModel:
             cell_data={"layer": [ (np.array(cell_data_layerID, dtype=np.float64)+3)*1e7 + np.array(node_index, dtype=np.float64) ] },
         )
         
-
-        fn = self.modelName+"_mesh.xdmf"
+        p = self._parameters.output_path/ 'mesh'
+        p.mkdir(parents=True, exist_ok=True)
+        fn = p/(self.modelName+"_mesh.xdmf")
  
         mesh.write( fn )
         logger.info(f"saved mesh to {fn}")             
@@ -805,7 +853,7 @@ class UniformNodeGridFixedSizeMeshModel:
             
         if (self.useBaseFlux):
             dofs_D = dolfinx.fem.locate_dofs_geometrical(self.V, boundary_D_top)
-            # print("dofs_D", self.tti, dofs_D.shape)
+            print("dofs_D", self.tti, dofs_D.shape)
         else:
             dofs_D = dolfinx.fem.locate_dofs_geometrical(self.V, boundary_D_top_bottom)
         u_bc = dolfinx.fem.Function(self.V)
@@ -919,6 +967,7 @@ class UniformNodeGridFixedSizeMeshModel:
             # expression g defines values of Neumann BC (heat flux at base)
             #x = ufl.SpatialCoordinate(self.mesh)
             domain_c = dolfinx.fem.Function(self.V)
+            domain_c.x.array[ : ] = 0.0
             if (self.CGorder>1):
                 def marker(x):
                     print(x.shape, x)
@@ -944,10 +993,10 @@ class UniformNodeGridFixedSizeMeshModel:
                 ymin, ymax = np.amin(self.mesh.geometry.x[:,1]), np.amax(self.mesh.geometry.x[:,1])
                 #
                 # remove corners from base heat flow domain
-                domain_c.x.array[  np.logical_and( self.mesh.geometry.x[:,0] < xmin+1, self.mesh.geometry.x[:,1] < ymin+1) ] = 0
-                domain_c.x.array[  np.logical_and( self.mesh.geometry.x[:,0] < xmin+1, self.mesh.geometry.x[:,1] > ymax-1) ] = 0
-                domain_c.x.array[  np.logical_and( self.mesh.geometry.x[:,0] > xmax-1, self.mesh.geometry.x[:,1] < ymin+1) ] = 0
-                domain_c.x.array[  np.logical_and( self.mesh.geometry.x[:,0] > xmax-1, self.mesh.geometry.x[:,1] > ymax-1) ] = 0
+                # domain_c.x.array[  np.logical_and( self.mesh.geometry.x[:,0] < xmin+1, self.mesh.geometry.x[:,1] < ymin+1) ] = 0
+                # domain_c.x.array[  np.logical_and( self.mesh.geometry.x[:,0] < xmin+1, self.mesh.geometry.x[:,1] > ymax-1) ] = 0
+                # domain_c.x.array[  np.logical_and( self.mesh.geometry.x[:,0] > xmax-1, self.mesh.geometry.x[:,1] < ymin+1) ] = 0
+                # domain_c.x.array[  np.logical_and( self.mesh.geometry.x[:,0] > xmax-1, self.mesh.geometry.x[:,1] > ymax-1) ] = 0
 
             domain_zero = dolfinx.fem.Function(self.V)
             toppos = self.getSubsidenceAtMultiplePos(self.mesh.geometry.x[:,0], self.mesh.geometry.x[:,1])
@@ -1294,54 +1343,64 @@ class UniformNodeGridFixedSizeMeshModel:
             assert res.flatten().shape[0] == x.shape[0]
         return res.flatten()
 
-    def nodeIsOnDomainEdge(self, node0):
-        return any([ e[0]==node0 or e[1]==node0 for e in self.convexHullEdges])
+    # def nodeIsOnDomainEdge(self, node0):
+    #     return any([ e[0]==node0 or e[1]==node0 for e in self.convexHullEdges])
 
-    def pointIsOnDomainEdge(self, pt, node0, node1, weight):
-        if (abs(weight)<0.01):
-            return self.nodeIsOnDomainEdge(node0)
-        if (abs(weight-1.0)<0.01):
-            return self.nodeIsOnDomainEdge(node1)
-        b0 = [node0, node1] in self.convexHullEdges
-        b1 = [node1, node0] in self.convexHullEdges
-        if b0 or b1:
-            return True
-        return False
+    # def pointIsOnDomainEdge(self, pt, node0, node1, weight):
+    #     if (abs(weight)<0.01):
+    #         return self.nodeIsOnDomainEdge(node0)
+    #     if (abs(weight-1.0)<0.01):
+    #         return self.nodeIsOnDomainEdge(node1)
+    #     b0 = [node0, node1] in self.convexHullEdges
+    #     b1 = [node1, node0] in self.convexHullEdges
+    #     if b0 or b1:
+    #         return True
+    #     return False
 
 
-def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0, out_dir = "out-mapA/",sedimentsOnly=False,writeout=True):
+def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0, pad_num_nodes=0,
+            sedimentsOnly=False, writeout=True, base_flux=None):
     builder=interpolate_all_nodes(builder)
     nums = 4
     dt = parameters.myr2s / nums # time step is 1/4 of 1Ma
     mms2 = []
     mms_tti = []
     tti = 0
-
+    # base_flux = 0.0033
+    out_dir = parameters.output_path / 'results3d'/'layers'
+    out_dir.mkdir(parents=True, exist_ok=True)
     time_solve = 0.0    
     with Bar('Processing...',check_tty=False, max=(start_time-end_time)) as bar:
         for tti in range(start_time, end_time-1,-1): #start from oldest
             rebuild_mesh = (tti==start_time)
             if rebuild_mesh:
                 logger.info(f"Rebuild/reload mesh at {tti}")          
-                mm2 = UniformNodeGridFixedSizeMeshModel(builder, parameters,sedimentsOnly)
+                mm2 = UniformNodeGridFixedSizeMeshModel(builder, parameters,sedimentsOnly, padding_num_nodes=pad_num_nodes)
                 mm2.buildMesh(tti)
+                if (base_flux is not None):
+                    mm2.baseFluxMagnitude = base_flux
             else:
                 logger.info(f"Re-generating mesh vertices at {tti}")
                 mm2.updateMesh(tti)
             logger.info(f"Solving {tti}")
-        
+
+            mm2.useBaseFlux = (base_flux is not None)
+            mm2.baseFluxMagnitude = base_flux
+
             if ( len(mms2) == 0):
                 tic()
+                mm2.useBaseFlux = False
                 mm2.setupSolverAndSolve(n_steps=40, time_step = 314712e8 * 2e2, skip_setup=False)   
                 time_solve = time_solve + toc(msg="setup solver and solve")
-            else:    
+            else:
+                mm2.useBaseFlux = (base_flux is not None)
                 tic()
                 mm2.setupSolverAndSolve( n_steps=nums, time_step=dt, skip_setup=(not rebuild_mesh))
                 time_solve = time_solve + toc(msg="setup solver and solve")
             if (writeout):
                 tic()
-                mm2.writeLayerIDFunction(out_dir+"LayerID-"+str(tti)+".xdmf", tti=tti)
-                mm2.writeTemperatureFunction(out_dir+"Temperature-"+str(tti)+".xdmf", tti=tti)
+                mm2.writeLayerIDFunction(out_dir/f"LayerID-{str(tti)}.xdmf", tti=tti)
+                mm2.writeTemperatureFunction(out_dir+f"Temperature-{str(tti)}.xdmf", tti=tti)
                 # mm2.writeOutputFunctions(out_dir+"test4-"+str(tti)+".xdmf", tti=tti)
                 toc(msg="write function")
             
@@ -1351,7 +1410,9 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
             bar.next()
     print("total time solve: " , time_solve)
     if (writeout):
-        EPCfilename = mm2.write_hexa_mesh_resqml("temp/")
+        resqml_path= parameters.output_path / 'results3d'/'mesh'
+        resqml_path.mkdir(parents=True, exist_ok=True)
+        EPCfilename = mm2.write_hexa_mesh_resqml(resqml_path)
         print("RESQML model written to: " , EPCfilename)
         read_mesh_resqml_hexa(EPCfilename)  # test reading of the .epc file
     return mm2

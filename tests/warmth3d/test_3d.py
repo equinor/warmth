@@ -52,15 +52,8 @@ def test_3d_compare():
 
 
 
-    try:
-        os.mkdir('mesh')
-    except FileExistsError:
-        pass
-    try:
-        os.mkdir('temp')
-    except FileExistsError:
-        pass
-    mm2 = run_3d(model.builder,model.parameters,start_time=model.parameters.time_start,end_time=0,writeout=False)
+
+    mm2 = run_3d(model.builder,model.parameters,start_time=model.parameters.time_start,end_time=0, pad_num_nodes=2,writeout=False, base_flux=None)
 
     
     hx = model.builder.grid.num_nodes_x // 2

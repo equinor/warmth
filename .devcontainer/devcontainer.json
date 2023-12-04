@@ -1,8 +1,7 @@
 {
 	"name": "warmth dolfinx poetry",
-	"build": {
-		"dockerfile": "Dockerfile"
-	},
+	"build": {"dockerfile": "Dockerfile"},
+
 
 	// 👇 Features to add to the Dev Container. More info: https://containers.dev/implementors/features.
 	// "features": {},

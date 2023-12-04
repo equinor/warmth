@@ -253,7 +253,7 @@ class Results:
             d = d[top_idx:base_idx]
             sed_id=sed_id[top_idx:base_idx]
             v=v[top_idx:base_idx]
-        return {"depth":d,"layerId":sed_id,"values":v}
+        return {"depth":d,"layerId":sed_id,"values":v,"reference":self._reference_conductivity(age)}
 
     def heatflow(self,age:int,sediment_id:int|None=None)->resultValues:
         """Heat flow at the centre of cells
@@ -273,7 +273,10 @@ class Results:
         t = self.temperature(age)["values"]
         d = self.depth(age)
         sed_id = self.sediment_ids(age)
-        v = self.effective_conductivity(age)["values"]*(t[1:]-t[:-1])/(d[1:]-d[:-1])
+        eff_con = self.effective_conductivity(age)
+        combined_con = eff_con["reference"].copy()
+        combined_con[ sed_id>=0 ] = eff_con["values"][sed_id>=0]
+        v = combined_con*(t[1:]-t[:-1])/(d[1:]-d[:-1])
         d = (d[1:]+d[:-1])/2
         if isinstance(sediment_id,int):
             top_idx,base_idx=self._filter_sed_id_index(sediment_id,sed_id)

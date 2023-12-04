@@ -5,6 +5,7 @@ from pathlib import Path
 
 import time
 import numpy as np
+from warmth.parameters import Parameters
 from warmth.postprocessing import Results_interpolator
 from warmth.utils import load_pickle
 from .logging import logger
@@ -23,8 +24,7 @@ class _nodeWorker:
         self.parameter_path:Path = args[0]
         self.node_path:Path = args[1]
         self.node=load_node(self.node_path)
-        self.parameters = load_pickle(self.parameter_path)
-        self.out_path=args[2]
+        self.parameters:Parameters = load_pickle(self.parameter_path)
         pass
 
     def _pad_sediments(self):
@@ -39,7 +39,7 @@ class _nodeWorker:
 
     def _save_results(self) -> Path:
         filename = self.node._name+"_results"
-        filepath = self.out_path / NODES_DIR/filename
+        filepath = self.parameters.output_path / NODES_DIR/filename
         self.node._dump(filepath)
         return filepath
 
@@ -88,19 +88,19 @@ class Simulator:
         self.process = 2
         self.cpu=self.process
         self.simulate_every = 1
-        self.out_path:Path=Path('./simout')
+        self._builder.parameters.output_path:Path=self._builder.parameters.output_path
         pass
 
     @property
     def _nodes_path(self):
-        return self.out_path / NODES_DIR
+        return self._builder.parameters.output_path / NODES_DIR
 
     @property
     def _parameters_path(self):
-        return self.out_path / PARAMETER_FILE
+        return self._builder.parameters.output_path / PARAMETER_FILE
     @property
     def _grid_path(self):
-        return self.out_path / GRID_FILE
+        return self._builder.parameters.output_path / GRID_FILE
 
 
 
@@ -121,17 +121,17 @@ class Simulator:
             futures = [th.submit(self.dump_input_nodes,  i)
                        for i in self._builder.iter_node() if i is not False]
             for future in concurrent.futures.as_completed(futures):
-                p.append([parameter_data_path, future.result(),self.out_path])
+                p.append([parameter_data_path, future.result()])
         return p
 
     def setup_directory(self, purge=False):
-        if self.out_path.exists():
+        if self._builder.parameters.output_path.exists():
             if purge:
                 from shutil import rmtree
-                rmtree(self.out_path)
+                rmtree(self._builder.parameters.output_path)
             else:
                 raise Exception(
-                    f'Output directory {self.out_path} already exist. Use purge=True to delete existing data')
+                    f'Output directory {self._builder.parameters.output_path} already exist. Use purge=True to delete existing data')
         self._nodes_path.mkdir(parents=True, exist_ok=True)
         return
 
@@ -206,7 +206,7 @@ class Simulator:
                 logger.warning(f"No result file for node X:{n.X}, Y:{n.Y}")
         if save==False:
             from shutil import rmtree
-            rmtree(self.out_path)
+            rmtree(self._builder.parameters.output_path)
         if filtered >0:
             logger.info(f"Interpolating results back to {filtered} partial simulated nodes")
             interp_res= Results_interpolator(self._builder,len(p)-filtered)

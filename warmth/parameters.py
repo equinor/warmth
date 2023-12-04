@@ -46,6 +46,7 @@ class Parameters:
         self.starting_beta: float = 1.1
         self.positive_down = True
         self.name:str = "model"
+        self.output_path:Path=Path('./simout')
         pass
 
     @property

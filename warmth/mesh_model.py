@@ -600,8 +600,9 @@ class UniformNodeGridFixedSizeMeshModel:
             cell_data={"layer": [ (np.array(cell_data_layerID, dtype=np.float64)+3)*1e7 + np.array(node_index, dtype=np.float64) ] },
         )
         
-
-        fn = self.modelName+"_mesh.xdmf"
+        p = self._parameters.output_path/ 'mesh'
+        p.mkdir(parents=True, exist_ok=True)
+        fn = p/(self.modelName+"_mesh.xdmf")
  
         mesh.write( fn )
         logger.info(f"saved mesh to {fn}")             
@@ -1358,7 +1359,7 @@ class UniformNodeGridFixedSizeMeshModel:
 
 
 def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0, pad_num_nodes=0,
-            out_dir = "out-mapA/",sedimentsOnly=False, writeout=True, base_flux=None):
+            sedimentsOnly=False, writeout=True, base_flux=None):
     builder=interpolate_all_nodes(builder)
     nums = 4
     dt = parameters.myr2s / nums # time step is 1/4 of 1Ma
@@ -1366,7 +1367,8 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
     mms_tti = []
     tti = 0
     # base_flux = 0.0033
-
+    out_dir = parameters.output_path / 'results3d'/'layers'
+    out_dir.mkdir(parents=True, exist_ok=True)
     time_solve = 0.0    
     with Bar('Processing...',check_tty=False, max=(start_time-end_time)) as bar:
         for tti in range(start_time, end_time-1,-1): #start from oldest
@@ -1390,15 +1392,15 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
                 mm2.useBaseFlux = False
                 mm2.setupSolverAndSolve(n_steps=40, time_step = 314712e8 * 2e2, skip_setup=False)   
                 time_solve = time_solve + toc(msg="setup solver and solve")
-            else:    
+            else:
                 mm2.useBaseFlux = (base_flux is not None)
                 tic()
                 mm2.setupSolverAndSolve( n_steps=nums, time_step=dt, skip_setup=(not rebuild_mesh))
                 time_solve = time_solve + toc(msg="setup solver and solve")
             if (writeout):
                 tic()
-                mm2.writeLayerIDFunction(out_dir+"LayerID-"+str(tti)+".xdmf", tti=tti)
-                mm2.writeTemperatureFunction(out_dir+"Temperature-"+str(tti)+".xdmf", tti=tti)
+                mm2.writeLayerIDFunction(out_dir/f"LayerID-{str(tti)}.xdmf", tti=tti)
+                mm2.writeTemperatureFunction(out_dir+f"Temperature-{str(tti)}.xdmf", tti=tti)
                 # mm2.writeOutputFunctions(out_dir+"test4-"+str(tti)+".xdmf", tti=tti)
                 toc(msg="write function")
             
@@ -1408,7 +1410,9 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
             bar.next()
     print("total time solve: " , time_solve)
     if (writeout):
-        EPCfilename = mm2.write_hexa_mesh_resqml("temp/")
+        resqml_path= parameters.output_path / 'results3d'/'mesh'
+        resqml_path.mkdir(parents=True, exist_ok=True)
+        EPCfilename = mm2.write_hexa_mesh_resqml(resqml_path)
         print("RESQML model written to: " , EPCfilename)
         read_mesh_resqml_hexa(EPCfilename)  # test reading of the .epc file
     return mm2

@@ -13,7 +13,7 @@ ehthumbs_vista.db
 
 # Recycle Bin used on file shares
 $RECYCLE.BIN/
-
+simout/
 # Windows Installer files
 *.cab
 *.msi

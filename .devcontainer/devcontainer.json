@@ -1,6 +1,6 @@
 {
 	"name": "warmth dolfinx poetry",
-	"image": "ghcr.io/equinor/warmth:latest",
+	"build": {"dockerfile": "Dockerfile"},
 
 	// 👇 Features to add to the Dev Container. More info: https://containers.dev/implementors/features.
 	// "features": {},
@@ -9,7 +9,7 @@
 	// "forwardPorts": [],
 
 	// 👇 Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "bash .devcontainer/postCreate.sh",
+	"postCreateCommand": "poetry config virtualenvs.create false && poetry env use system && poetry install --with dev --no-interaction",
 
 	// 👇 Configure tool-specific properties.
 	"customizations": {
@@ -27,8 +27,8 @@
 		"features": {
 			"ghcr.io/devcontainers/features/git-lfs:1": {},
 			"ghcr.io/devcontainers/features/docker-in-docker:2": {}
-		}
+		},
 
 	// 👇 Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	// "remoteUser": "root"
+	"remoteUser": "root"
 }

@@ -4,7 +4,6 @@
 name: Tests3D
  
 on:
-  workflow_dispatch:
   workflow_call:
     inputs:
       event_type:
@@ -13,9 +12,18 @@ on:
       action_type:
         required: true
         type: string
+  workflow_dispatch:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'warmth/warmth3d/**'
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'warmth/warmth3d/**'
 jobs:
   build:
-
+    environment: test3d
     runs-on: ubuntu-latest
 
     steps:
@@ -23,12 +31,11 @@ jobs:
 
     - name: Run
       uses: tj-actions/docker-run@v2
+
       with:
         image: ghcr.io/equinor/warmth:latest
         name: dolfinx
         options: -v ${{ github.workspace }}:/home/warmth
-        args: |
-          bash -c "cd /home/warmth" && pip install . pytest==7.4.2 pytest-cov==4.1.0 && pytest --cov-report=term-missing --cov=warmth tests | tee pytest-coverage.txt
 
     - name: Comment coverage
       if: ${{ github.event_name == 'pull_request' && github.event.action == 'opened' }}

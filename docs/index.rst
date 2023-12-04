@@ -9,6 +9,7 @@ Welcome to warmth's documentation!
 
    theory
    example
+   3D
    apireference
 
 

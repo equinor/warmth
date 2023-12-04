@@ -249,6 +249,28 @@ class UniformNodeGridFixedSizeMeshModel:
             cond_per_cell, rhp_per_cell, lid_per_cell)
         return filename_hex
 
+    def heatflow_at_crust_sed_boundary(self):
+        hf_array = np.zeros([self.num_nodes_x-2*self.padX, self.num_nodes_y-2*self.padX])
+        for hy in range(self.padX, self.num_nodes_y-self.padX):
+            for hx in range(self.padX, self.num_nodes_x-self.padX):
+                v_per_n = int(self.mesh_vertices.shape[0]/(self.num_nodes_y*self.num_nodes_x))
+                ind_base_of_sed = v_per_n - self.numElemInAsth - self.numElemInLith - self.numElemInCrust -1
+                # first_ind_in_crust = v_per_n - self.numElemInAsth - self.numElemInLith - self.numElemInCrust
+
+                node_ind = hy*self.num_nodes_x + hx
+                # nn = model.builder.nodes[hy][hx]
+                nn = self.node1D[node_ind]
+                temp_3d_ind = np.array([ np.where([self.mesh_reindex==i])[1][0] for i in range(node_ind*v_per_n+ind_base_of_sed, node_ind*v_per_n+ind_base_of_sed+2 ) ] )
+                dd = self.mesh.geometry.x[temp_3d_ind,2]
+                tt = self.u_n.x.array[temp_3d_ind]
+                hf = nn.kCrust*(tt[1]-tt[0])/(dd[1]-dd[0])
+
+                hx_unpad = hx - self.padX            
+                hy_unpad = hy - self.padX            
+                hf_array[hx_unpad, hy_unpad] = hf
+        return hf_array
+
+
     def getSubsidenceAtMultiplePos(self, pos_x, pos_y):
         """Returns subsidence values at given list of x,y positions.
             TODO: re-design
@@ -435,7 +457,7 @@ class UniformNodeGridFixedSizeMeshModel:
                     self.sed_diff_z.append(0.0)
                     self.mesh_vertices_age_unsorted.append(1000)
 
-                base_aest = 260000
+                base_aest = base_lith+130000 # 260000
                 for i in range(1,self.numElemInAsth+1):
                     self.mesh_vertices_0.append( [ node.X, node.Y, base_lith+(base_aest-base_lith)*(i/self.numElemInAsth) ] )
                     self.sed_diff_z.append(0.0)

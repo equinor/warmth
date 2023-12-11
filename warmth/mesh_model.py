@@ -1,3 +1,5 @@
+import math
+from pathlib import Path
 from typing import Tuple
 import numpy as np
 from mpi4py import MPI
@@ -167,7 +169,7 @@ class UniformNodeGridFixedSizeMeshModel:
         return filename
 
 
-    def write_hexa_mesh_resqml( self, out_path):
+    def write_hexa_mesh_resqml( self, out_path:Path):
         """Prepares arrays and calls the RESQML output helper function for hexa meshes:  the lith and aesth are removed, and the remaining
            vertices and cells are renumbered;  the sediment properties are prepared for output.
 
@@ -242,8 +244,8 @@ class UniformNodeGridFixedSizeMeshModel:
         T_per_vertex = [ self.uh.x.array[reverse_reindex_order[i]] for i in range(self.mesh.geometry.x.shape[0]) if i in p_to_keep  ]
         age_per_vertex = [ self.mesh_vertices_age[reverse_reindex_order[i]] for i in range(self.mesh.geometry.x.shape[0]) if i in p_to_keep  ]
 
-        from os import path
-        filename_hex = path.join(out_path, self.modelName+'_hexa_'+str(self.tti)+'.epc')
+        
+        filename_hex = out_path /f'{self.modelName}_hexa_{str(self.tti)}.epc'
         write_hexa_grid_with_properties(filename_hex, np.array(points_cached), hexa_renumbered, "hexamesh",
             np.array(T_per_vertex), np.array(age_per_vertex), poro0_per_cell, decay_per_cell, density_per_cell,
             cond_per_cell, rhp_per_cell, lid_per_cell)
@@ -614,7 +616,7 @@ class UniformNodeGridFixedSizeMeshModel:
             self.node_index = np.mod(aa.values.copy(),1e7).astype(np.int32)
         #
         # obtain original vertex order as encoded in z-pos digits
-
+    
         zz  = self.mesh.geometry.x[:,2].copy()
         zz2 = np.mod(zz,1000)
         self.mesh_reindex = (1e-4+zz2*100).astype(np.int32)
@@ -1360,6 +1362,9 @@ class UniformNodeGridFixedSizeMeshModel:
 
 def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0, pad_num_nodes=0,
             sedimentsOnly=False, writeout=True, base_flux=None):
+    pad_m = 500
+    node_width= builder.grid.step_x
+    pad_num_nodes=math.ceil(pad_m/node_width)
     builder=interpolate_all_nodes(builder)
     nums = 4
     dt = parameters.myr2s / nums # time step is 1/4 of 1Ma
@@ -1407,8 +1412,11 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
             mms2.append(mm2)
             mms_tti.append(tti)
             logger.info(f"Simulated time step {tti}")
+            hf = mm2.heatflow_at_crust_sed_boundary()
+            np.save(f"hf{str(tti)}.npy",hf)
             bar.next()
     print("total time solve: " , time_solve)
+
     if (writeout):
         resqml_path= parameters.output_path / 'results3d'/'mesh'
         resqml_path.mkdir(parents=True, exist_ok=True)

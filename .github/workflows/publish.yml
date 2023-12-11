@@ -6,6 +6,10 @@ name: build
 on:
   workflow_dispatch:
     
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   test3d:
     uses: equinor/warmth/.github/workflows/python-test-3d.yml@main
@@ -19,6 +23,8 @@ jobs:
       action_type: ${{ github.event.action}}
   snyk:
     uses: equinor/warmth/.github/workflows/snyk.yml@main
+    secrets:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
   docs:
     uses: equinor/warmth/.github/workflows/docs.yml@main
 

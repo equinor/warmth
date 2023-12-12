@@ -1,10 +1,10 @@
 name: Snyk scan
 on: 
-    push:
-        branches: [main, dev]
     workflow_call:
       secrets:
         SNYK_TOKEN:
+          required: true
+        GITHUB_TOKEN:
           required: true
 jobs:
   security:
@@ -18,7 +18,9 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           args: --sarif-file-output=snyk.sarif --severity-threshold=high
+
       - name: Upload result to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: snyk.sarif
+          token: ${{ secrets.GITHUB_TOKEN }}

@@ -6,6 +6,9 @@ name: docs
 on:
   workflow_dispatch:
   workflow_call:
+    secrets:
+      GITHUB_TOKEN:
+        required: true
   push:
     branches: [ main ]
     

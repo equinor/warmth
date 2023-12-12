@@ -337,7 +337,155 @@ class Results:
             return top_sediment_index,base_sediment_index
         else:
             raise Exception(f"Invalid sediment id {sed_id}. Valid ids: {np.unique(sed_id_arr[~np.isnan(sed_id_arr)])}")
+    
+    def _mid_pt_temperature(self,arr:np.ndarray[np.float64])->np.ndarray[np.float64]:
+        return (arr[1:]+arr[:-1])/2
+    
+    
+    def temperature_history(self,sed_id:int)->np.ndarray[np.float64]:
+        max_age_for_sed= np.max(np.argwhere(self._sediments_ids==sed_id)[:,1])
+        all_valid_sed_age=np.arange(max_age_for_sed+1)
+        total_cells = self.sediment_ids(0)[self.sediment_ids(0)==sed_id].size
+        res = np.full((total_cells,max_age_for_sed+1),np.nan)
+        cell_idx = total_cells-1
+        starting_idx=-1
+        while cell_idx >=0:
+            for age in reversed(all_valid_sed_age): 
+                t_old = self._mid_pt_temperature(self.temperature(age,sed_id)["values"])
+                if t_old.size >=starting_idx*-1:
+                    res[cell_idx,age]=t_old[starting_idx]
+                else:
+                    pass
+            starting_idx = starting_idx-1
+            cell_idx = cell_idx-1
+        return res
+    def vitrinite_reflectance_history(self,sed_id,Rotype="Easy%RoDL"):
+        temp_h = self.temperature_history(sed_id)
+        for i in range(temp_h.shape[0]):
+            cell = temp_h[i]
+            if Rotype=="Easy%RoDL":
+                vr = VR.easyRoDL(cell[~np.isnan(cell)])
+            else:
+                raise Exception (f"{Rotype} not implemented")
+            temp_h[i,:vr.size]=vr.flatten()
+        return temp_h
+    def vitrinite_reflectance(self,sed_id:int|None=None,Rotype="Easy%RoDL")->resultValues: 
+        sed_ids_all = self.sediment_ids(0)
+        d = self.depth(0)
+        d = (d[1:]+d[:-1])/2
+        v = self.vitrinite_reflectance_history(0,Rotype)[:,0]
+        if isinstance(sed_id,type(None)):
+            only_sed= np.unique(sed_ids_all)
+            only_sed = only_sed[only_sed>-1]
+            v = np.empty(0)
+            for i in only_sed:
+                v_new = self.vitrinite_reflectance_history(int(i),Rotype)[:,0]
+                v = np.append(v,v_new)
+            top_sed_idx,_=self._filter_sed_id_index(0,sed_ids_all)
+            top_crust_idx,_=self._filter_sed_id_index(-1,sed_ids_all)
+            d=d[top_sed_idx:top_crust_idx]
+            sed_ids_all=sed_ids_all[top_sed_idx:top_crust_idx]
+        else:
+            v = self.vitrinite_reflectance_history(sed_id,Rotype)[:,0]
+            top_idx,base_idx=self._filter_sed_id_index(sed_id,sed_ids_all)
+            d=d[top_idx:base_idx]
+            sed_ids_all=sed_ids_all[top_idx:base_idx]
+        return {"depth":d,"layerId":sed_ids_all,"values":v}
+    
+class VR:
+    def __init__(self) -> None:
+        pass
+    @staticmethod
+    def cum_reacted(A, E, weights, time, temp_k):
+        c = 0.0019858775  # 8.3144621/4184 (  Convert from kilocalorie to Joule by multiplication of 4184)
+        # Dimensions
+        nt = temp_k.size
+        nw = weights.size
 
+        # Heating rate between different time-steps, degC/s
+        heat_rate = np.zeros([nt, 1])
+        for i in range(1, time.shape[0]):
+            heat_rate[i] = (
+                (temp_k[i] - temp_k[i - 1]) / (time[i] - time[i - 1]) / 31600000000000
+            )
+
+        # I: nt x nw, Equation 10 in Sweeney and Burnham, 1990
+        I = np.zeros([nt, nw])
+        for i in range(0, time.size):
+            for j in range(0, weights.size):
+                E_RT_temp = E[j] / (c * temp_k[i])
+                I[i, j] = (
+                    A
+                    * temp_k[i]
+                    * np.exp(-E_RT_temp)
+                    * (
+                        1.0
+                        - (E_RT_temp**2 + 2.334733 * E_RT_temp + 0.250621)
+                        / (E_RT_temp**2 + 3.330657 * E_RT_temp + 1.681534)
+                    )
+                )
+
+        # Cumulative Reacted
+        CR_easy = np.zeros([nt, 1])
+        DI = np.zeros([nt, nw])
+
+        # When computing the deltas, drop index 0, start at index 1
+        for i in range(1, time.size):
+            for j in range(0, weights.size):
+                DI[i, j] = DI[i - 1, j] + (I[i, j] - I[i - 1, j]) / heat_rate[i]
+                CR_easy[i] += weights[j] * (1 - np.exp(-DI[i, j]))
+
+        return CR_easy
+    
+    @staticmethod
+    def easyRoDL(temperature:np.ndarray[np.float64])->np.ndarray[np.float64]:
+        """Easy%RoDL from temperature history
+
+        Parameters
+        ----------
+        temperature : np.ndarray[np.float64]
+            Temperature history in ascending time per Ma (C)
+
+        Returns
+        -------
+        Vitrinite reflectance np.ndarray[np.float64]
+            Vitrinite reflectance based on Easy%RoDL
+        """
+        temp_k = temperature+273
+        temp_k = np.flip(temp_k)
+        time=np.arange(np.count_nonzero(~np.isnan(temp_k)))
+        A_V = 2e15
+        E_easy_V = np.array(
+            [40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76]
+        )
+        weights_easy_V = np.array(
+            [
+                0.03,
+                0.04,
+                0.045,
+                0.045,
+                0.045,
+                0.04,
+                0.045,
+                0.05,
+                0.055,
+                0.06,
+                0.07,
+                0.08,
+                0.07,
+                0.06,
+                0.05,
+                0.04,
+                0.03,
+                0.03,
+                0.025,
+            ]
+        )
+
+        Cr_easy_V = VR.cum_reacted(A_V, E_easy_V, weights_easy_V, time, temp_k)
+        RoV = 0.223 * np.exp(3.7 * Cr_easy_V)
+        return np.flip(RoV)
+    
 class Results_interpolator:
     def __init__(self, builder,n_valid_node:int) -> None:
         self._builder = builder

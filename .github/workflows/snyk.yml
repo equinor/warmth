@@ -1,11 +1,11 @@
 name: Snyk scan
 on: 
-    workflow_call:
-      secrets:
-        SNYK_TOKEN:
-          required: true
-        GITHUB_TOKEN:
-          required: true
+  workflow_call:
+    secrets:
+      SNYK_TOKEN:
+        required: true
+      GITHUB_TOKEN_WORKFLOW:
+        required: true
 jobs:
   security:
     runs-on: ubuntu-latest
@@ -23,4 +23,4 @@ jobs:
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: snyk.sarif
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN_WORKFLOW }}

@@ -1,5 +1,3 @@
-import math
-from pathlib import Path
 from typing import Tuple
 import numpy as np
 from mpi4py import MPI
@@ -51,12 +49,13 @@ class UniformNodeGridFixedSizeMeshModel:
         self.TempBase = 1369
         self.verbose = True
         self.minimumCellThick = 0.05
+        self.averageLABdepth = 260000
         
         self.runSedimentsOnly = sedimentsOnly
 
-        self.numElemPerSediment = 4
-        self.numElemInCrust = 0 if self.runSedimentsOnly else 8    # split crust hexahedron into pieces
-        self.numElemInLith = 0 if self.runSedimentsOnly else 4  # split lith hexahedron into pieces
+        self.numElemPerSediment = 2
+        self.numElemInCrust = 0 if self.runSedimentsOnly else 2    # split crust hexahedron into pieces
+        self.numElemInLith = 0 if self.runSedimentsOnly else 2  # split lith hexahedron into pieces
         self.numElemInAsth = 0 if self.runSedimentsOnly else 2  # split asth hexahedron into pieces
 
         self.num_nodes_x = self._builder.grid.num_nodes_x
@@ -169,7 +168,7 @@ class UniformNodeGridFixedSizeMeshModel:
         return filename
 
 
-    def write_hexa_mesh_resqml( self, out_path:Path):
+    def write_hexa_mesh_resqml( self, out_path):
         """Prepares arrays and calls the RESQML output helper function for hexa meshes:  the lith and aesth are removed, and the remaining
            vertices and cells are renumbered;  the sediment properties are prepared for output.
 
@@ -244,8 +243,8 @@ class UniformNodeGridFixedSizeMeshModel:
         T_per_vertex = [ self.uh.x.array[reverse_reindex_order[i]] for i in range(self.mesh.geometry.x.shape[0]) if i in p_to_keep  ]
         age_per_vertex = [ self.mesh_vertices_age[reverse_reindex_order[i]] for i in range(self.mesh.geometry.x.shape[0]) if i in p_to_keep  ]
 
-        
-        filename_hex = out_path /f'{self.modelName}_hexa_{str(self.tti)}.epc'
+        from os import path
+        filename_hex = path.join(out_path, self.modelName+'_hexa_'+str(self.tti)+'.epc')
         write_hexa_grid_with_properties(filename_hex, np.array(points_cached), hexa_renumbered, "hexamesh",
             np.array(T_per_vertex), np.array(age_per_vertex), poro0_per_cell, decay_per_cell, density_per_cell,
             cond_per_cell, rhp_per_cell, lid_per_cell)
@@ -346,11 +345,11 @@ class UniformNodeGridFixedSizeMeshModel:
         """Porosity (at surface) conductivity value for the given layer index
         """           
         if (layer_id==-1):
-            return 0.0,0.0 # porosity (at surface) of crust
+            return 0.0,1e8 # porosity (at surface) of crust
         if (layer_id==-2):
-            return 0.0,0.0 # porosity (at surface) of lith
+            return 0.0,1e8 # porosity (at surface) of lith
         if (layer_id==-3):
-            return 0.0,0.0  # porosity (at surface) of aesth
+            return 0.0,1e8  # porosity (at surface) of aesth
         if (layer_id>=0) and (layer_id<self.numberOfSediments):
             # assert (node_index < len(self.node1D)) and node_index > 0
             node = self.node1D[node_index]
@@ -420,16 +419,23 @@ class UniformNodeGridFixedSizeMeshModel:
         self.mesh_vertices_0 = []
         self.sed_diff_z = []
         self.mesh_vertices_age_unsorted = []
-        if not self.runSedimentsOnly:
-            mean_top_of_lith = np.mean( np.array( [ self.getTopOfLithAtNode(tti, node) for node in self.node1D ] ) )
-            mean_top_of_asth = np.mean( np.array( [ self.getTopOfAsthAtNode(tti, node) for node in self.node1D ] ) )
-            logger.info(f'Time {tti}: mean top of lith: {mean_top_of_lith:.1f}; of asth: {mean_top_of_asth:.1f} ')
 
-        for node in self.node1D:
+        import time
+        # st = time.time()
+        # if not self.runSedimentsOnly:
+        #     mean_top_of_lith = np.mean( np.array( [ self.getTopOfLithAtNode(tti, node) for node in self.node1D ] ) )
+        #     mean_top_of_asth = np.mean( np.array( [ self.getTopOfAsthAtNode(tti, node) for node in self.node1D ] ) )
+        #     logger.info(f'Time {tti}: mean top of lith: {mean_top_of_lith:.1f}; of asth: {mean_top_of_asth:.1f} ')
+        # delta = time.time() - st
+        # print("buildvertices delta 1", delta)
+
+        for ind,node in enumerate(self.node1D):
             top_of_sediments = top_sed(node, tti)
             self.mesh_vertices_0.append( [ node.X, node.Y, top_of_sediments - 0.0*(self.numberOfSedimentCells+1) ] )
             self.sed_diff_z.append(-self.minimumCellThick*(self.numberOfSedimentCells+1))
             self.mesh_vertices_age_unsorted.append(node.sediments.topage[0])  # append top age of top sediment
+            if (ind==0):
+                st = time.time()
             for ss in range(self.numberOfSediments):
                 for j in range(self.numElemPerSediment):
                     base_of_prev_sediments = bottom_sed_id(node, ss-1, tti) if (ss>0) else top_of_sediments
@@ -444,16 +450,46 @@ class UniformNodeGridFixedSizeMeshModel:
                     self.sed_diff_z.append(-self.minimumCellThick*(self.numberOfSedimentCells - (ss*self.numElemPerSediment+j) ))
                     age_of_previous = node.sediments.baseage[ss-1] if (ss>0) else 0.0
                     self.mesh_vertices_age_unsorted.append( age_of_previous + ((j+1) / self.numElemPerSediment) * (node.sediments.baseage[ss]-age_of_previous) )  # append interpolatedbase age of current sediment
-
+            if (ind==0):
+                delta = time.time() - st
+                print("delta 2", delta)
+                st = time.time()
             if not self.runSedimentsOnly:
                 base_of_last_sediments = bottom_sed_id(node, self.numberOfSediments-1, tti) if (self.numberOfSediments>0) else top_of_sediments
-                base_crust = mean_top_of_lith
+                # base_crust = mean_top_of_lith
+                # base_crust = self.getTopOfLithAtNode(tti, node)
+                # top_crust(nn,tti) + thick_crust(nn,tti)
+                # def top_crust(nn, tti):
+                #     if (tti > nn.subsidence.shape[0]-1):    
+                #         return 0.0
+                #     return nn.subsidence[tti] + nn.sed_thickness_ls[tti]
+                # def top_sed(nn:single_node, tti):
+                #     if (tti > nn.subsidence.shape[0]-1):    
+                #         return 0.0
+                #     return nn.subsidence[tti]
+                # def thick_crust(nn, tti):
+                #     if (tti > nn.crust_ls.shape[0]-1):    
+                #         return 0.0
+                #     return nn.crust_ls[tti]
+                
+                base_crust = node.subsidence[tti] + node.sed_thickness_ls[tti] + node.crust_ls[tti]
+                # base_crust = 30000
+                # if (ind==0):
+                #     print("0", type(node.subsidence))
+                #     print("1", type(node.sed_thickness_ls))
+                #     print("2", type(node.crust_ls))
+                #     print("3", type(node.lith_ls))
+
                 for i in range(1,self.numElemInCrust+1):
                     self.mesh_vertices_0.append( [ node.X, node.Y, base_of_last_sediments+ (base_crust-base_of_last_sediments)*(i/self.numElemInCrust) ] )
                     self.sed_diff_z.append(0.0)
                     self.mesh_vertices_age_unsorted.append(1000)
 
-                base_lith = mean_top_of_asth
+                # base_lith = mean_top_of_asth
+                # base_lith = self.getTopOfAsthAtNode(tti, node)
+                
+                base_lith = node.crust_ls[tti]+node.lith_ls[tti]+node.subsidence[tti]+node.sed_thickness_ls[tti]
+                # base_lith = 100000
                 for i in range(1,self.numElemInLith+1):
                     self.mesh_vertices_0.append( [ node.X, node.Y, base_crust+ (base_lith-base_crust)*(i/self.numElemInLith) ] )
                     self.sed_diff_z.append(0.0)
@@ -464,6 +500,9 @@ class UniformNodeGridFixedSizeMeshModel:
                     self.mesh_vertices_0.append( [ node.X, node.Y, base_lith+(base_aest-base_lith)*(i/self.numElemInAsth) ] )
                     self.sed_diff_z.append(0.0)
                     self.mesh_vertices_age_unsorted.append(1000)
+            if (ind==0):
+                delta = time.time() - st
+                print("delta 3", delta)
 
         assert len(self.mesh_vertices_0) % self.num_nodes ==0
         self.mesh_vertices_0 = np.array(self.mesh_vertices_0)
@@ -498,15 +537,23 @@ class UniformNodeGridFixedSizeMeshModel:
         logger.info("Built mesh")
         self.updateMesh(tti)
         logger.info("Updated vertices")
+
      
 
     def updateMesh(self,tti:int):
         """Construct the mesh positions at the given time index tti, and update the existing mesh with the new values
         """   
+        import time
         assert self.mesh is not None
-        self.tti = tti
+        self.tti = tti        
+        st = time.time()
         self.buildVertices(time_index=tti, useFakeEncodedZ=False)
+        delta = time.time() - st
+        print("updatemesh delta 1", delta)
+        st = time.time()
         self.updateVertices()        
+        delta = time.time() - st
+        print("updatemesh delta 2", delta)
 
     def buildHexahedra(self, keep_padding=True):
         xpnum = self.num_nodes_x
@@ -564,6 +611,8 @@ class UniformNodeGridFixedSizeMeshModel:
         v_per_n = int(len(self.mesh_vertices) / self.num_nodes)
         hexaHedra, hex_data_layerID, hex_data_nodeID = self.buildHexahedra()
 
+        comm = MPI.COMM_WORLD
+
 
         # https://www.baumanneduard.ch/Splitting%20a%20cube%20in%20tetrahedras2.htm
         tetsplit1 = [ [1,2,4,8], [1,2,5,8], [4,8,2,3], [2,3,7,8], [2,5,6,8], [2,6,7,8] ]
@@ -602,21 +651,30 @@ class UniformNodeGridFixedSizeMeshModel:
             cell_data={"layer": [ (np.array(cell_data_layerID, dtype=np.float64)+3)*1e7 + np.array(node_index, dtype=np.float64) ] },
         )
         
-        p = self._parameters.output_path/ 'mesh'
-        p.mkdir(parents=True, exist_ok=True)
-        fn = p/(self.modelName+"_mesh.xdmf")
- 
-        mesh.write( fn )
-        logger.info(f"saved mesh to {fn}")             
+        def mpi_print(s):
+            print(f"Rank {comm.rank}: {s}")
+        fn = self.modelName+"_mesh.xdmf"
+        if comm.rank==0:
+            mesh.write( fn )
+            logger.info(f"saved mesh to {fn}")             
+        comm.Barrier()
         enc = dolfinx.io.XDMFFile.Encoding.HDF5
-        with dolfinx.io.XDMFFile(MPI.COMM_SELF, fn, "r", encoding=enc) as file:
-            self.mesh = file.read_mesh(name="Grid" )
+        with dolfinx.io.XDMFFile(MPI.COMM_WORLD, fn, "r", encoding=enc) as file:   # MPI.COMM_SELF
+            self.mesh = file.read_mesh(name="Grid", ghost_mode=dolfinx.cpp.mesh.GhostMode.shared_facet)
             aa=file.read_meshtags(self.mesh, name="Grid")
             self.cell_data_layerID = np.floor(aa.values.copy()*1e-7)-3
             self.node_index = np.mod(aa.values.copy(),1e7).astype(np.int32)
-        #
+        self.mesh.topology.create_connectivity(3,0)  # create_connectivity_all()
+        mpi_print(f"Number of local cells: {self.mesh.topology.index_map(3).size_local}")
+        mpi_print(f"Number of global cells: {self.mesh.topology.index_map(3).size_global}")
+        mpi_print(f"Number of local vertices: {self.mesh.topology.index_map(0).size_local}")
+        mpi_print(f"Ghost cells (global numbering): {self.mesh.topology.index_map(3).ghosts}")
+        mpi_print(f"Ghost nodes (global numbering): {self.mesh.topology.index_map(0).ghosts}")
+        # mpi_print("Cell (dim = 2) to vertex (dim = 0) connectivity")
+        # mpi_print(self.mesh.topology.connectivity(3, 0))
+        
         # obtain original vertex order as encoded in z-pos digits
-    
+
         zz  = self.mesh.geometry.x[:,2].copy()
         zz2 = np.mod(zz,1000)
         self.mesh_reindex = (1e-4+zz2*100).astype(np.int32)
@@ -660,47 +718,102 @@ class UniformNodeGridFixedSizeMeshModel:
         Returns:
             npt.NDArray[np.float64]: Effective conductivity of sediments
         """
+        import time
         def boundary(x):
             return np.full(x.shape[1], True)
+        st = time.time()
         entities = dolfinx.mesh.locate_entities(self.mesh, 3, boundary )
         tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh, 3, entities, False)
+        print("sekiguchi step 0", time.time()-st)
         self.layer_id_per_vertex = [ [] for _ in range(self.mesh.geometry.x.shape[0]) ]
+        ## 
         ## TODO vectorize and use function from Forward model
-        for i,t in enumerate(tet):
-            lidval = int(self.layerIDsFcn.x.array[i])
-            if (lidval<0):
-                # only relevant for sediment
-                self.mean_porosity.x.array[i] = 0.0
-                continue
-            zpos = [ self.mesh.geometry.x[ti,2] for ti in t]
-            xpos = [ self.mesh.geometry.x[ti,0] for ti in t]
-            ypos = [ self.mesh.geometry.x[ti,1] for ti in t]
-            fkey = self.floatKey2D([xpos[0]+2e-2, ypos[0]+2e-2])
-            meshZmin = UniformNodeGridFixedSizeMeshModel.point_top_vertex_map.get(fkey, 1e10)
-            if (meshZmin < 1e9):
-                zpos = [ (zp-meshZmin) for zp in zpos ]
-            top_km = np.amin(zpos) / 1e3
-            bottom_km = np.amax(zpos) / 1e3
-            poro0 = self.porosity0.x.array[i]
-            decay = self.porosityDecay.x.array[i]
-            f1 = poro0 / (decay * (bottom_km-top_km))
-            f2 = np.exp(-1 * decay * top_km) - np.exp(-1 * decay * bottom_km)
-            mean_porosity = f1*f2
-            self.porosityAtDepth.x.array[i] = mean_porosity
+        # kk0=np.zeros(self.thermalCond0.shape)
+        # for i,t in enumerate(tet):
+        #     lidval = int(self.layerIDsFcn.x.array[i])
+        #     if (lidval<0):
+        #         # only relevant for sediment
+        #         self.mean_porosity.x.array[i] = 0.0
+        #         continue
+        #     zpos = [ self.mesh.geometry.x[ti,2] for ti in t]
+        #     xpos = [ self.mesh.geometry.x[ti,0] for ti in t]
+        #     ypos = [ self.mesh.geometry.x[ti,1] for ti in t]
+        #     fkey = self.floatKey2D([xpos[0]+2e-2, ypos[0]+2e-2])
+        #     # nn = self.node1D[self.node_index[i]]
+        #     meshZmin = UniformNodeGridFixedSizeMeshModel.point_top_vertex_map.get(fkey, 1e10)
+        #     # meshZmin = nn.subsidence[self.tti]
+        #     # meshZmin = 0.0
+        #     if (meshZmin < 1e9):
+        #         zpos = [ (zp-meshZmin) for zp in zpos ]
+        #     top_km = np.amin(zpos) / 1e3
+        #     bottom_km = np.amax(zpos) / 1e3
+        #     poro0 = self.porosity0.x.array[i]
+        #     decay = self.porosityDecay.x.array[i]
+        #     f1 = poro0 / (decay * (bottom_km-top_km))
+        #     f2 = np.exp(-1 * decay * top_km) - np.exp(-1 * decay * bottom_km)
+        #     mean_porosity = f1*f2
+        #     self.porosityAtDepth.x.array[i] = mean_porosity
             
-            cond_local = self.kForLayerID(lidval, self.node_index[i])
-            temperature_C = np.mean(np.array([ self.uh.x.array[ti] for ti in t]))
+        #     cond_local = self.kForLayerID(lidval, self.node_index[i])
+        #     kk0[i] = cond_local
+        #     temperature_C = np.mean(np.array([ self.uh.x.array[ti] for ti in t]))
 
-            temperature_K = 273.15 + temperature_C
-            conductivity_effective = 1.84 + 358 * ( (1.0227*cond_local)-1.882) * ((1/temperature_K)-0.00068)
-            conductivity_effective = conductivity_effective * (1.0-mean_porosity) # * np.sqrt(1-mean_porosity)
+        #     temperature_K = 273.15 + temperature_C
+        #     conductivity_effective = 1.84 + 358 * ( (1.0227*cond_local)-1.882) * ((1/temperature_K)-0.00068)
+        #     conductivity_effective = conductivity_effective * (1.0-mean_porosity) # * np.sqrt(1-mean_porosity)
 
-            self.thermalCond.x.array[i] = conductivity_effective
-            self.mean_porosity.x.array[i] = mean_porosity
-            self.c_rho.x.array[i] = self._parameters.cp*((self.c_rho0.x.array[i]/self._parameters.cp) * (1-mean_porosity) + mean_porosity*self._parameters.rhowater)
+        #     self.thermalCond.x.array[i] = conductivity_effective
+        #     self.mean_porosity.x.array[i] = mean_porosity
+        #     self.c_rho.x.array[i] = self._parameters.cp*((self.c_rho0.x.array[i]/self._parameters.cp) * (1-mean_porosity) + mean_porosity*self._parameters.rhowater)
 
+
+        # nn = self.node1D[self.node_index[0]]
+        # self.subsidence_at_nodes = np.zeros([self.thermalCond0.shape[0], nn.subsidence.shape[0] ])
+        # for i in range(self.thermalCond0.shape[0]):
+        #     nn = self.node1D[self.node_index[i]]
+        #     self.subsidence_at_nodes[i,:] = nn.subsidence.copy()
+
+        top_km = (np.min(self.mesh.geometry.x[tet,2], 1)-self.subsidence_at_nodes[:,self.tti]) * 1e-3
+        bottom_km = (np.max(self.mesh.geometry.x[tet,2], 1)-self.subsidence_at_nodes[:,self.tti]) * 1e-3
+        poro0 = self.porosity0.x.array[:]
+        decay = self.porosityDecay.x.array[:]
+        ii = np.where(top_km<0.0)
+
+        diff_z = np.amin(top_km)
+        top_km[top_km<0.0] = top_km[top_km<0.0]+0.0002-diff_z
+        bottom_km[bottom_km<0.0] = bottom_km[bottom_km<0.0]+0.0002-diff_z
+        f1 = np.divide( self.porosity0.x.array[:], np.multiply( self.porosityDecay.x.array[:], bottom_km-top_km ) )
+        f2 = np.exp(-1 * np.multiply(decay, top_km)) - np.exp(-1 * np.multiply(decay, bottom_km))
+        mean_porosity = np.multiply(f1,f2)
+
+
+        # temperature_C is the mean temperature in the cells
+        temperature_C = np.mean(self.uh.x.array[tet[:,:]],1)
+        # temperature_C = np.mean(np.array([ self.uh.x.array[ti] for ti in t]))
+        temperature_K_inv = np.reciprocal(273.15 + temperature_C)
+        conductivity_effective = 1.84 + 358 * np.multiply( ( (1.0227*self.thermalCond0)-1.882) , ((temperature_K_inv)-0.00068) )
+        conductivity_effective = conductivity_effective * (1.0-mean_porosity) # * np.sqrt(1-mean_porosity)
+        #error_cond = np.amax( np.abs(self.thermalCond.x.array[self.layerIDsFcn.x.array[:]>=0]-conductivity_effective[self.layerIDsFcn.x.array[:]>=0]) )
+        #error_poro  = np.amax( np.abs(self.mean_porosity.x.array[:]-mean_porosity) )
+        # print("error cond.", np.amax( np.abs(self.thermalCond.x.array[self.layerIDsFcn.x.array[:]>=0]-conductivity_effective[self.layerIDsFcn.x.array[:]>=0]) ))
+        # print("error poro ", np.amax( np.abs(self.mean_porosity.x.array[:]-mean_porosity) ))
+        # if (np.isnan(error_cond)):
+        #     breakpoint()
+        # if (np.isnan(error_poro)):
+        #     breakpoint()
+        # if (error_cond>0.1):
+        #     breakpoint()
+        self.thermalCond.x.array[self.layerIDsFcn.x.array[:]>=0] = conductivity_effective[self.layerIDsFcn.x.array[:]>=0]
+        self.mean_porosity.x.array[self.layerIDsFcn.x.array[:]>=0] = mean_porosity[self.layerIDsFcn.x.array[:]>=0]
+
+        newrho = self._parameters.cp * np.multiply( \
+            ((self.c_rho0.x.array[:]/self._parameters.cp)), (1-mean_porosity)) + mean_porosity*self._parameters.rhowater
+        #self.c_rho.x.array[:] = self._parameters.cp * np.multiply( \
+        #    ((self.c_rho0.x.array[:]/self._parameters.cp)), (1-mean_porosity)) + mean_porosity*self._parameters.rhowater
+        self.c_rho.x.array[self.layerIDsFcn.x.array[:]>=0] = newrho[self.layerIDsFcn.x.array[:]>=0] 
         # self.rhpFcn.x.array[:] = np.multiply( self.rhp0.x.array[:], (1.0-self.mean_porosity.x.array[:]) )
-        self.rhpFcn.x.array[:] = np.multiply( self.rhp0.x.array[:], 1.0 )
+        # self.rhpFcn.x.array[:] = self.rhp0.x.array
+        # self.rhpFcn.x.array[:] = np.multiply( self.rhp0.x.array[:], 1.0 )
 
     def getCellMidpoints(self):  
         def boundary(x):
@@ -756,6 +869,7 @@ class UniformNodeGridFixedSizeMeshModel:
 
         ks = [ self.kForLayerID(lid,self.node_index[i]) for i,lid in enumerate(ls)]
         thermalCond.x.array[:] = np.array(ks, dtype=PETSc.ScalarType).flatten()
+        self.thermalCond0 = np.array(ks, dtype=PETSc.ScalarType).flatten()
 
         rhps = [ self.rhpForLayerID(lid,self.node_index[i]) for i,lid in enumerate(ls)]
         rhp.x.array[:] = np.array(rhps, dtype=PETSc.ScalarType).flatten()
@@ -839,9 +953,13 @@ class UniformNodeGridFixedSizeMeshModel:
         """ Generate a dolfinx Dirichlet Boundary condition that applies at the top and bottom vertices.
             The values at the edges are those in function self.TemperatureStep
         """ 
+        import time
         # Dirichlet BC at top and bottom
         self.Zmax = np.amax(self.mesh.geometry.x[:,2])
-        self.averageLABdepth = np.mean(np.array([ top_sed(n, self.tti) for n in self.node1D]))
+        st = time.time()
+        self.averageLABdepth = np.mean(np.array([ top_asth(n, self.tti) for n in self.node1D]))
+        print("delta BC 1 ", time.time()-st)
+        print("self.averageLABdepth", self.averageLABdepth)
         def boundary_D_top_bottom(x):
             subs0 = self.getSubsidenceAtMultiplePos(x[0,:], x[1,:])
             xx = np.logical_or( np.abs(x[2]-subs0)<5, np.isclose(x[2], self.Zmax) )
@@ -854,12 +972,18 @@ class UniformNodeGridFixedSizeMeshModel:
             return xx
             
         if (self.useBaseFlux):
+            st = time.time()
             dofs_D = dolfinx.fem.locate_dofs_geometrical(self.V, boundary_D_top)
             print("dofs_D", self.tti, dofs_D.shape)
+            print("delta BC 2 ", time.time()-st)
         else:
+            st = time.time()
             dofs_D = dolfinx.fem.locate_dofs_geometrical(self.V, boundary_D_top_bottom)
+            print("delta BC 3 ", time.time()-st)
         u_bc = dolfinx.fem.Function(self.V)
+        st = time.time()
         u_bc.interpolate(self.TemperatureGradient)
+        print("delta BC 4 ", time.time()-st)
         bc = dolfinx.fem.dirichletbc(u_bc, dofs_D)
         return bc
 
@@ -904,11 +1028,21 @@ class UniformNodeGridFixedSizeMeshModel:
             Sets up the heat equation in dolfinx, and solves the system in time for the given number of steps.
             
             Use skip_setup = True to continue a computation (e.g. after deforming the mesh), instead of starting one from scratch 
-        """     
+        """   
+        comm = MPI.COMM_WORLD          
+        def mpi_print(s):
+            print(f"Rank {comm.rank}: {s}")
+
         if (not skip_setup):
+            mpi_print(f"Before resetmesh Number of local cells: {self.mesh.topology.index_map(3).size_local}")
+            mpi_print(f"Number of global cells: {self.mesh.topology.index_map(3).size_global}")
+            mpi_print(f"Number of local vertices: {self.mesh.topology.index_map(0).size_local}")
             self.resetMesh()
             self.Zmin = np.min(self.mesh_vertices, axis=0)[2]
             self.Zmax = np.max(self.mesh_vertices, axis=0)[2]
+            mpi_print(f"After resetmeshNumber of local cells: {self.mesh.topology.index_map(3).size_local}")
+            mpi_print(f"Number of global cells: {self.mesh.topology.index_map(3).size_global}")
+            mpi_print(f"Number of local vertices: {self.mesh.topology.index_map(0).size_local}")
         
         # Time-dependent heat problem:
         #   time-discretized variational form with backwards Euler,
@@ -938,12 +1072,33 @@ class UniformNodeGridFixedSizeMeshModel:
             self.uh.x.array[:] = self.u_n.x.array[:].copy()
 
 
-        self.thermalCond, self.c_rho, self.layerIDsFcn, self.rhpFcn = self.buildKappaAndLayerIDs()
-        assert not np.any(np.isnan(self.thermalCond.x.array))
-        
-        self.sedimentsConductivitySekiguchi()
+        import time
 
+        if (not skip_setup):
+            st = time.time()
+            self.thermalCond, self.c_rho, self.layerIDsFcn, self.rhpFcn = self.buildKappaAndLayerIDs()
+            assert not np.any(np.isnan(self.thermalCond.x.array))
+            print("solve delay 1", time.time()-st)
+
+        if (not skip_setup):
+            st = time.time()
+            nn = self.node1D[self.node_index[0]]
+            self.subsidence_at_nodes = np.zeros([self.thermalCond0.shape[0], nn.subsidence.shape[0] ])
+            for i in range(len(self.node1D)):
+                nn = self.node1D[i]
+                iix = np.where(self.node_index==i)
+                self.subsidence_at_nodes[iix,:] = nn.subsidence
+            print("solve delay 1.3", time.time()-st)
+
+        
+        st = time.time()
+        self.sedimentsConductivitySekiguchi()
+        print("solve delay 2", time.time()-st)
+
+        # if (not skip_setup):
+        st = time.time()
         self.bc = self.buildDirichletBC()
+        print("delta C", time.time()-st)
 
         t=0
         dt = time_step if (time_step>0) else  3600*24*365 * 5000000
@@ -954,13 +1109,14 @@ class UniformNodeGridFixedSizeMeshModel:
         #  https://jorgensd.github.io/dolfinx-tutorial/chapter2/diffusion_code.html
         #
 
+        st = time.time()
+
         u = ufl.TrialFunction(self.V)
         v = ufl.TestFunction(self.V)
 
         a = self.c_rho*u*v*ufl.dx + dt*ufl.dot(self.thermalCond*ufl.grad(u), ufl.grad(v)) * ufl.dx
         f = self.rhpFcn 
         logger.info(f"mean RHP {np.mean(self.rhpFcn.x.array[:])}")
-
 
         if ( self.useBaseFlux ):
             # baseFlux = 0.03 if (self.tti>50) else 0.03 
@@ -1016,17 +1172,22 @@ class UniformNodeGridFixedSizeMeshModel:
         A = dolfinx.fem.petsc.assemble_matrix(bilinear_form, bcs=[self.bc])
         A.assemble()
         b = dolfinx.fem.petsc.create_vector(linear_form)
+        print("delta 2", time.time()-st)
 
-        from petsc4py import PETSc
+        st = time.time()
+        comm = MPI.COMM_WORLD
         solver = PETSc.KSP().create(self.mesh.comm)
 
         solver.setOperators(A)
         solver.setType(PETSc.KSP.Type.PREONLY)
         solver.getPC().setType(PETSc.PC.Type.LU)
-        
+
+        print("delta F", time.time()-st)
+
+        import time
         for i in range(num_steps):
             t += dt
-
+            st = time.time()
             # Update the right hand side reusing the initial vector
             with b.localForm() as loc_b:
                 loc_b.set(0)
@@ -1049,6 +1210,9 @@ class UniformNodeGridFixedSizeMeshModel:
             # Update solution at previous time step (u_n)
             # diffnorm = np.sum(np.abs(self.u_n.x.array - self.uh.x.array)) / self.u_n.x.array.shape[0]
             self.u_n.x.array[:] = self.uh.x.array
+            print("delay compute ", time.time()-st)
+            # comm.Barrier()
+
 
 
 
@@ -1361,10 +1525,8 @@ class UniformNodeGridFixedSizeMeshModel:
 
 
 def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0, pad_num_nodes=0,
-            sedimentsOnly=False, writeout=True, base_flux=None):
-    pad_m = 500
-    node_width= builder.grid.step_x
-    pad_num_nodes=math.ceil(pad_m/node_width)
+            out_dir = "out-mapA/",sedimentsOnly=False, writeout=True, base_flux=None):
+    comm = MPI.COMM_WORLD
     builder=interpolate_all_nodes(builder)
     nums = 4
     dt = parameters.myr2s / nums # time step is 1/4 of 1Ma
@@ -1372,23 +1534,28 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
     mms_tti = []
     tti = 0
     # base_flux = 0.0033
-    out_dir = parameters.output_path / 'results3d'/'layers'
-    out_dir.mkdir(parents=True, exist_ok=True)
     time_solve = 0.0    
+    posarr = []
+    Tarr = []
     with Bar('Processing...',check_tty=False, max=(start_time-end_time)) as bar:
         for tti in range(start_time, end_time-1,-1): #start from oldest
             rebuild_mesh = (tti==start_time)
             if rebuild_mesh:
                 logger.info(f"Rebuild/reload mesh at {tti}")          
                 mm2 = UniformNodeGridFixedSizeMeshModel(builder, parameters,sedimentsOnly, padding_num_nodes=pad_num_nodes)
+                comm.Barrier()
+                # if comm.rank == 0:
                 mm2.buildMesh(tti)
+                comm.Barrier()
                 if (base_flux is not None):
                     mm2.baseFluxMagnitude = base_flux
             else:
                 logger.info(f"Re-generating mesh vertices at {tti}")
+                tic()
                 mm2.updateMesh(tti)
+                toc(msg="update mesh")
             logger.info(f"Solving {tti}")
-
+            posarr.append( mm2.mesh.geometry.x.copy() )
             mm2.useBaseFlux = (base_flux is not None)
             mm2.baseFluxMagnitude = base_flux
 
@@ -1397,30 +1564,26 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
                 mm2.useBaseFlux = False
                 mm2.setupSolverAndSolve(n_steps=40, time_step = 314712e8 * 2e2, skip_setup=False)   
                 time_solve = time_solve + toc(msg="setup solver and solve")
-            else:
+            else:    
                 mm2.useBaseFlux = (base_flux is not None)
                 tic()
                 mm2.setupSolverAndSolve( n_steps=nums, time_step=dt, skip_setup=(not rebuild_mesh))
                 time_solve = time_solve + toc(msg="setup solver and solve")
             if (writeout):
                 tic()
-                mm2.writeLayerIDFunction(out_dir/f"LayerID-{str(tti)}.xdmf", tti=tti)
-                mm2.writeTemperatureFunction(out_dir+f"Temperature-{str(tti)}.xdmf", tti=tti)
+                mm2.writeLayerIDFunction(out_dir+"LayerID-"+str(tti)+".xdmf", tti=tti)
+                mm2.writeTemperatureFunction(out_dir+"Temperature-"+str(tti)+".xdmf", tti=tti)
                 # mm2.writeOutputFunctions(out_dir+"test4-"+str(tti)+".xdmf", tti=tti)
                 toc(msg="write function")
             
+            Tarr.append(mm2.u_n.x.array.copy())
             mms2.append(mm2)
             mms_tti.append(tti)
             logger.info(f"Simulated time step {tti}")
-            hf = mm2.heatflow_at_crust_sed_boundary()
-            np.save(f"hf{str(tti)}.npy",hf)
             bar.next()
     print("total time solve: " , time_solve)
-
     if (writeout):
-        resqml_path= parameters.output_path / 'results3d'/'mesh'
-        resqml_path.mkdir(parents=True, exist_ok=True)
-        EPCfilename = mm2.write_hexa_mesh_resqml(resqml_path)
+        EPCfilename = mm2.write_hexa_mesh_resqml("temp/")
         print("RESQML model written to: " , EPCfilename)
         read_mesh_resqml_hexa(EPCfilename)  # test reading of the .epc file
-    return mm2
+    return mm2,posarr,Tarr

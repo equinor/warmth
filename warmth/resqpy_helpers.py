@@ -7,7 +7,7 @@ import resqpy.crs as rqc
 import resqpy.model as rq
 import resqpy.olio.uuid as bu
 import resqpy.unstructured as rug
-
+import resqpy.time_series as rts
 
 #
 #  Our example resqml model can be read using the read_mesh_resqml function below.. 
@@ -344,6 +344,10 @@ def write_hexa_grid_with_properties(filename, nodes, cells, modelTitle = "hexame
     crs = rqc.Crs(model)
     crs.create_xml()
 
+    # gts = rts.GeologicTimeSeries(model, title="warmth simulation")
+    # gts.create_time_index(182)
+    # gts.create_xml()
+
     # create an empty HexaGrid
     hexa = rug.HexaGrid(model, title = modelTitle)
     assert hexa.cell_shape == 'hexahedral'
@@ -457,4 +461,6 @@ def write_hexa_grid_with_properties(filename, nodes, cells, modelTitle = "hexame
                                     uom = 'W/m3')
 
     model.store_epc()
+
+
 

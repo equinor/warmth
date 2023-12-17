@@ -54,9 +54,9 @@ class UniformNodeGridFixedSizeMeshModel:
         self.runSedimentsOnly = sedimentsOnly
 
         self.numElemPerSediment = 2
-        self.numElemInCrust = 0 if self.runSedimentsOnly else 2    # split crust hexahedron into pieces
-        self.numElemInLith = 0 if self.runSedimentsOnly else 2  # split lith hexahedron into pieces
-        self.numElemInAsth = 0 if self.runSedimentsOnly else 2  # split asth hexahedron into pieces
+        self.numElemInCrust = 0 if self.runSedimentsOnly else 6    # split crust hexahedron into pieces
+        self.numElemInLith = 0 if self.runSedimentsOnly else 6  # split lith hexahedron into pieces
+        self.numElemInAsth = 0 if self.runSedimentsOnly else 6  # split asth hexahedron into pieces
 
         self.num_nodes_x = self._builder.grid.num_nodes_x
         self.num_nodes_y = self._builder.grid.num_nodes_y
@@ -450,6 +450,8 @@ class UniformNodeGridFixedSizeMeshModel:
                     self.sed_diff_z.append(-self.minimumCellThick*(self.numberOfSedimentCells - (ss*self.numElemPerSediment+j) ))
                     age_of_previous = node.sediments.baseage[ss-1] if (ss>0) else 0.0
                     self.mesh_vertices_age_unsorted.append( age_of_previous + ((j+1) / self.numElemPerSediment) * (node.sediments.baseage[ss]-age_of_previous) )  # append interpolatedbase age of current sediment
+            if (ind==97) and (tti==0):
+                breakpoint()
             if (ind==0):
                 delta = time.time() - st
                 print("delta 2", delta)
@@ -629,6 +631,8 @@ class UniformNodeGridFixedSizeMeshModel:
                 lid_per_node.append(-3)
         assert len(lid_per_node) == v_per_n
 
+        # breakpoint()
+
         cells = []
         cell_data_layerID = []
         node_index = []
@@ -679,6 +683,7 @@ class UniformNodeGridFixedSizeMeshModel:
         zz2 = np.mod(zz,1000)
         self.mesh_reindex = (1e-4+zz2*100).astype(np.int32)
         self.mesh0_geometry_x = self.mesh.geometry.x.copy()
+        # breakpoint()
 
 
 
@@ -696,7 +701,7 @@ class UniformNodeGridFixedSizeMeshModel:
             nz0 = (p[2] - Zmin0) / (self.averageLABdepth - Zmin0)
             nz0 = min(nz0, 1.0)
             res[i] = nz0 * (self.TempBase-self.Temp0) + self.Temp0
-            if (p[2]>250000):
+            if (p[2]>130000):
                 res[i] =  1330 + (p[2]-self.averageLABdepth)*0.0003  # 1369
 
             # Zmax = np.amax(x[2,:])
@@ -949,6 +954,13 @@ class UniformNodeGridFixedSizeMeshModel:
         assert False, "to be re-implemented"
 
 
+    def updateDBC(self):
+        self.averageLABdepth = np.mean(np.array([ top_asth(n, self.tti) for n in self.node1D]))
+        print("self.averageLABdepth", self.averageLABdepth)
+        ii = np.where(self.mesh.geometry.x[:,2]>250000)
+        self.bc.value.x.array[ii] = 1330+(self.mesh.geometry.x[ii,2]-self.averageLABdepth)*0.0003
+
+
     def buildDirichletBC(self):
         """ Generate a dolfinx Dirichlet Boundary condition that applies at the top and bottom vertices.
             The values at the edges are those in function self.TemperatureStep
@@ -962,13 +974,13 @@ class UniformNodeGridFixedSizeMeshModel:
         print("self.averageLABdepth", self.averageLABdepth)
         def boundary_D_top_bottom(x):
             subs0 = self.getSubsidenceAtMultiplePos(x[0,:], x[1,:])
-            xx = np.logical_or( np.abs(x[2]-subs0)<5, np.isclose(x[2], self.Zmax) )
+            xx = np.logical_or( np.abs(x[2]-subs0) < 0.9*self.minimumCellThick, np.abs(x[2]-self.Zmax)<10000 )
             return xx
         def boundary_D_top(x):
             subs0 = self.getSubsidenceAtMultiplePos(x[0,:], x[1,:])
             # print("subs0", self.tti, subs0.shape, subs0[np.abs(subs0)>1].shape, subs0[np.abs(subs0)>1] )
             #print("subs0", self.tti, subs0.shape, subs0[np.abs(subs0)>1].shape, subs0[np.abs(subs0)>1] )
-            xx = np.logical_or( np.abs(x[2]-subs0)<5, np.isclose(x[2], 1e6*self.Zmax) )            
+            xx = np.logical_or( np.abs(x[2]-subs0) < 0.9*self.minimumCellThick, np.isclose(x[2], 1e6*self.Zmax) )            
             return xx
             
         if (self.useBaseFlux):
@@ -1095,10 +1107,14 @@ class UniformNodeGridFixedSizeMeshModel:
         self.sedimentsConductivitySekiguchi()
         print("solve delay 2", time.time()-st)
 
-        # if (not skip_setup):
-        st = time.time()
-        self.bc = self.buildDirichletBC()
-        print("delta C", time.time()-st)
+        if (not skip_setup):
+            st = time.time()
+            self.bc = self.buildDirichletBC()
+            print("delta C", time.time()-st)
+        else:
+            st = time.time()
+            self.updateDBC()
+            print("delta C.2", time.time()-st)
 
         t=0
         dt = time_step if (time_step>0) else  3600*24*365 * 5000000

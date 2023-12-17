@@ -53,10 +53,11 @@ class UniformNodeGridFixedSizeMeshModel:
         
         self.runSedimentsOnly = sedimentsOnly
 
+        # 2 6 6 6
         self.numElemPerSediment = 2
-        self.numElemInCrust = 0 if self.runSedimentsOnly else 6    # split crust hexahedron into pieces
-        self.numElemInLith = 0 if self.runSedimentsOnly else 6  # split lith hexahedron into pieces
-        self.numElemInAsth = 0 if self.runSedimentsOnly else 6  # split asth hexahedron into pieces
+        self.numElemInCrust = 0 if self.runSedimentsOnly else 4    # split crust hexahedron into pieces
+        self.numElemInLith = 0 if self.runSedimentsOnly else 4  # split lith hexahedron into pieces
+        self.numElemInAsth = 0 if self.runSedimentsOnly else 4  # split asth hexahedron into pieces
 
         self.num_nodes_x = self._builder.grid.num_nodes_x
         self.num_nodes_y = self._builder.grid.num_nodes_y
@@ -405,7 +406,7 @@ class UniformNodeGridFixedSizeMeshModel:
             return 0
 
 
-    def buildVertices(self, time_index=0, useFakeEncodedZ=False):
+    def buildVertices(self, time_index=0, useFakeEncodedZ=False, optimized=False):
         """Determine vertex positions, node-by-node.
            For every node, the same number of vertices is added (one per sediment, one per crust, lith, asth, and one at the bottom)
            Degenerate vertices (e.g. at nodes where sediment is yet to be deposited or has been eroded) are avoided by a small shift, kept in self.sed_diff_z
@@ -415,101 +416,152 @@ class UniformNodeGridFixedSizeMeshModel:
         """           
         tti = time_index
         self.tti = time_index
-
-        self.mesh_vertices_0 = []
-        self.sed_diff_z = []
-        self.mesh_vertices_age_unsorted = []
-
         import time
-        # st = time.time()
-        # if not self.runSedimentsOnly:
-        #     mean_top_of_lith = np.mean( np.array( [ self.getTopOfLithAtNode(tti, node) for node in self.node1D ] ) )
-        #     mean_top_of_asth = np.mean( np.array( [ self.getTopOfAsthAtNode(tti, node) for node in self.node1D ] ) )
-        #     logger.info(f'Time {tti}: mean top of lith: {mean_top_of_lith:.1f}; of asth: {mean_top_of_asth:.1f} ')
-        # delta = time.time() - st
-        # print("buildvertices delta 1", delta)
 
-        for ind,node in enumerate(self.node1D):
-            top_of_sediments = top_sed(node, tti)
-            self.mesh_vertices_0.append( [ node.X, node.Y, top_of_sediments - 0.0*(self.numberOfSedimentCells+1) ] )
-            self.sed_diff_z.append(-self.minimumCellThick*(self.numberOfSedimentCells+1))
-            self.mesh_vertices_age_unsorted.append(node.sediments.topage[0])  # append top age of top sediment
-            if (ind==0):
-                st = time.time()
+        compare = False
+        # if (self.mesh_vertices is not None):
+        if (optimized) and hasattr(self, 'mesh_vertices'):            
+            # self.numElemPerSediment = 1
+            # self.numElemInCrust = 0 if self.runSedimentsOnly else 1    # split crust hexahedron into pieces
+            # self.numElemInLith = 0 if self.runSedimentsOnly else 1  # split lith hexahedron into pieces
+            # self.numElemInAsth = 0 if self.runSedimentsOnly else 1  # split asth hexahedron into pieces
+            compare = True
+            xxT = self.top_sed_at_nodes[:,tti]
+            bc = self.base_crust_at_nodes[:,tti]
+            bl = self.base_lith_at_nodes[:,tti]
+            ba = bl.copy()+130000
+            aa = np.array([self.top_sed_at_nodes[:,tti]])
+
             for ss in range(self.numberOfSediments):
                 for j in range(self.numElemPerSediment):
-                    base_of_prev_sediments = bottom_sed_id(node, ss-1, tti) if (ss>0) else top_of_sediments
-                    base_of_current_sediments = bottom_sed_id(node, ss, tti)
+                    base_of_prev_sediments = self.bottom_sed_id_at_nodes[ss-1][:,tti] if (ss>0) else (self.bottom_sed_id_at_nodes[ss][:,tti]*0)
+                    base_of_current_sediments = self.bottom_sed_id_at_nodes[ss][:,tti]
                     base_of_current_sediments = base_of_prev_sediments + (base_of_current_sediments-base_of_prev_sediments)* (j+1) / self.numElemPerSediment
                     if self.runSedimentsOnly:
                         zpos = base_of_current_sediments
+                        aa = np.concatenate([aa,np.array([zpos])])
                     else:
-                        zpos = top_of_sediments + base_of_current_sediments
-                    vert = np.array([ node.X, node.Y, zpos ])
-                    self.mesh_vertices_0.append( vert )
-                    self.sed_diff_z.append(-self.minimumCellThick*(self.numberOfSedimentCells - (ss*self.numElemPerSediment+j) ))
-                    age_of_previous = node.sediments.baseage[ss-1] if (ss>0) else 0.0
-                    self.mesh_vertices_age_unsorted.append( age_of_previous + ((j+1) / self.numElemPerSediment) * (node.sediments.baseage[ss]-age_of_previous) )  # append interpolatedbase age of current sediment
-            if (ind==97) and (tti==0):
-                breakpoint()
-            if (ind==0):
-                delta = time.time() - st
-                print("delta 2", delta)
-                st = time.time()
-            if not self.runSedimentsOnly:
-                base_of_last_sediments = bottom_sed_id(node, self.numberOfSediments-1, tti) if (self.numberOfSediments>0) else top_of_sediments
-                # base_crust = mean_top_of_lith
-                # base_crust = self.getTopOfLithAtNode(tti, node)
-                # top_crust(nn,tti) + thick_crust(nn,tti)
-                # def top_crust(nn, tti):
-                #     if (tti > nn.subsidence.shape[0]-1):    
-                #         return 0.0
-                #     return nn.subsidence[tti] + nn.sed_thickness_ls[tti]
-                # def top_sed(nn:single_node, tti):
-                #     if (tti > nn.subsidence.shape[0]-1):    
-                #         return 0.0
-                #     return nn.subsidence[tti]
-                # def thick_crust(nn, tti):
-                #     if (tti > nn.crust_ls.shape[0]-1):    
-                #         return 0.0
-                #     return nn.crust_ls[tti]
-                
-                base_crust = node.subsidence[tti] + node.sed_thickness_ls[tti] + node.crust_ls[tti]
-                # base_crust = 30000
-                # if (ind==0):
-                #     print("0", type(node.subsidence))
-                #     print("1", type(node.sed_thickness_ls))
-                #     print("2", type(node.crust_ls))
-                #     print("3", type(node.lith_ls))
+                        zpos = xxT + base_of_current_sediments
+                        aa = np.concatenate([aa,np.array([zpos])])
 
-                for i in range(1,self.numElemInCrust+1):
-                    self.mesh_vertices_0.append( [ node.X, node.Y, base_of_last_sediments+ (base_crust-base_of_last_sediments)*(i/self.numElemInCrust) ] )
-                    self.sed_diff_z.append(0.0)
-                    self.mesh_vertices_age_unsorted.append(1000)
 
-                # base_lith = mean_top_of_asth
-                # base_lith = self.getTopOfAsthAtNode(tti, node)
-                
-                base_lith = node.crust_ls[tti]+node.lith_ls[tti]+node.subsidence[tti]+node.sed_thickness_ls[tti]
-                # base_lith = 100000
-                for i in range(1,self.numElemInLith+1):
-                    self.mesh_vertices_0.append( [ node.X, node.Y, base_crust+ (base_lith-base_crust)*(i/self.numElemInLith) ] )
-                    self.sed_diff_z.append(0.0)
-                    self.mesh_vertices_age_unsorted.append(1000)
+            # for k in range(self.numberOfSediments):
+            #     aa = np.concatenate([aa,xxT+np.array([self.bottom_sed_id_at_nodes[k][:,tti]])])
 
-                base_aest = base_lith+130000 # 260000
-                for i in range(1,self.numElemInAsth+1):
-                    self.mesh_vertices_0.append( [ node.X, node.Y, base_lith+(base_aest-base_lith)*(i/self.numElemInAsth) ] )
-                    self.sed_diff_z.append(0.0)
-                    self.mesh_vertices_age_unsorted.append(1000)
-            if (ind==0):
-                delta = time.time() - st
-                print("delta 3", delta)
+            # aa = np.concatenate([aa,np.array([bc])])
 
-        assert len(self.mesh_vertices_0) % self.num_nodes ==0
-        self.mesh_vertices_0 = np.array(self.mesh_vertices_0)
-        self.sed_diff_z = np.array(self.sed_diff_z)
-        self.mesh_vertices = self.mesh_vertices_0.copy()
+            # zp = base_of_last_sediments+ (base_crust-base_of_last_sediments)*(i/self.numElemInCrust) 
+            base_of_last_sediments = (xxT+self.bottom_sed_id_at_nodes[-1][:,tti]) if (len(self.bottom_sed_id_at_nodes)>0) else xxT
+
+            for i in range(1,self.numElemInCrust+1):
+                zp = base_of_last_sediments+ (bc-base_of_last_sediments)*(i/self.numElemInCrust) 
+                # self.mesh_vertices_0.append( [ node.X, node.Y, base_of_last_sediments+ (base_crust-base_of_last_sediments)*(i/self.numElemInCrust) ] )
+                # self.sed_diff_z.append(0.0)
+                # self.mesh_vertices_age_unsorted.append(1000)
+                aa = np.concatenate([aa,np.array([zp])])
+
+            for i in range(1,self.numElemInLith+1):
+                zp = bc+ (bl-bc)*(i/self.numElemInLith) 
+                aa = np.concatenate([aa,np.array([zp])])
+            for i in range(1,self.numElemInAsth+1):
+                zp = bl+ (ba-bl)*(i/self.numElemInLith) 
+                aa = np.concatenate([aa,np.array([zp])])
+
+            # aa = np.concatenate([aa,np.array([bl])])
+            # aa = np.concatenate([aa,np.array([ba])])
+            new_z_pos_0 = np.transpose(aa).flatten()
+            mm0 = self.mesh_vertices.copy()
+            mm0[:,2] = new_z_pos_0
+            self.mesh_vertices_0 = mm0
+        else:
+            self.mesh_vertices_0 = []
+            self.sed_diff_z = []
+            self.mesh_vertices_age_unsorted = []
+
+            for ind,node in enumerate(self.node1D):
+                top_of_sediments = top_sed(node, tti)
+                self.mesh_vertices_0.append( [ node.X, node.Y, top_of_sediments - 0.0*(self.numberOfSedimentCells+1) ] )
+                self.sed_diff_z.append(-self.minimumCellThick*(self.numberOfSedimentCells+1))
+                self.mesh_vertices_age_unsorted.append(node.sediments.topage[0])  # append top age of top sediment
+                if (ind==0):
+                    st = time.time()
+                for ss in range(self.numberOfSediments):
+                    for j in range(self.numElemPerSediment):
+                        base_of_prev_sediments = bottom_sed_id(node, ss-1, tti) if (ss>0) else top_of_sediments
+                        base_of_current_sediments = bottom_sed_id(node, ss, tti)
+                        base_of_current_sediments = base_of_prev_sediments + (base_of_current_sediments-base_of_prev_sediments)* (j+1) / self.numElemPerSediment
+                        if self.runSedimentsOnly:
+                            zpos = base_of_current_sediments
+                        else:
+                            zpos = top_of_sediments + base_of_current_sediments
+                        vert = np.array([ node.X, node.Y, zpos ])
+                        self.mesh_vertices_0.append( vert )
+                        self.sed_diff_z.append(-self.minimumCellThick*(self.numberOfSedimentCells - (ss*self.numElemPerSediment+j) ))
+                        age_of_previous = node.sediments.baseage[ss-1] if (ss>0) else 0.0
+                        self.mesh_vertices_age_unsorted.append( age_of_previous + ((j+1) / self.numElemPerSediment) * (node.sediments.baseage[ss]-age_of_previous) )  # append interpolatedbase age of current sediment
+                # if (ind==97) and (tti==0):
+                #     breakpoint()
+                if (ind==0):
+                    delta = time.time() - st
+                    print("delta 2", delta)
+                    st = time.time()
+                if not self.runSedimentsOnly:
+                    base_of_last_sediments = bottom_sed_id(node, self.numberOfSediments-1, tti) if (self.numberOfSediments>0) else top_of_sediments
+                    # base_crust = mean_top_of_lith
+                    # base_crust = self.getTopOfLithAtNode(tti, node)
+                    # top_crust(nn,tti) + thick_crust(nn,tti)
+                    # def top_crust(nn, tti):
+                    #     if (tti > nn.subsidence.shape[0]-1):    
+                    #         return 0.0
+                    #     return nn.subsidence[tti] + nn.sed_thickness_ls[tti]
+                    # def top_sed(nn:single_node, tti):
+                    #     if (tti > nn.subsidence.shape[0]-1):    
+                    #         return 0.0
+                    #     return nn.subsidence[tti]
+                    # def thick_crust(nn, tti):
+                    #     if (tti > nn.crust_ls.shape[0]-1):    
+                    #         return 0.0
+                    #     return nn.crust_ls[tti]
+                    
+                    base_crust = node.subsidence[tti] + node.sed_thickness_ls[tti] + node.crust_ls[tti]
+                    # base_crust = 30000
+                    # if (ind==0):
+                    #     print("0", type(node.subsidence))
+                    #     print("1", type(node.sed_thickness_ls))
+                    #     print("2", type(node.crust_ls))
+                    #     print("3", type(node.lith_ls))
+
+                    for i in range(1,self.numElemInCrust+1):
+                        self.mesh_vertices_0.append( [ node.X, node.Y, base_of_last_sediments+ (base_crust-base_of_last_sediments)*(i/self.numElemInCrust) ] )
+                        self.sed_diff_z.append(0.0)
+                        self.mesh_vertices_age_unsorted.append(1000)
+
+                    # base_lith = mean_top_of_asth
+                    # base_lith = self.getTopOfAsthAtNode(tti, node)
+                    
+                    base_lith = node.crust_ls[tti]+node.lith_ls[tti]+node.subsidence[tti]+node.sed_thickness_ls[tti]
+                    # base_lith = 100000
+                    for i in range(1,self.numElemInLith+1):
+                        self.mesh_vertices_0.append( [ node.X, node.Y, base_crust+ (base_lith-base_crust)*(i/self.numElemInLith) ] )
+                        self.sed_diff_z.append(0.0)
+                        self.mesh_vertices_age_unsorted.append(1000)
+
+                    base_aest = base_lith+130000 # 260000
+                    for i in range(1,self.numElemInAsth+1):
+                        self.mesh_vertices_0.append( [ node.X, node.Y, base_lith+(base_aest-base_lith)*(i/self.numElemInAsth) ] )
+                        self.sed_diff_z.append(0.0)
+                        self.mesh_vertices_age_unsorted.append(1000)
+                if (ind==0):
+                    delta = time.time() - st
+                    print("delta 3", delta)
+
+            assert len(self.mesh_vertices_0) % self.num_nodes ==0
+            self.mesh_vertices_0 = np.array(self.mesh_vertices_0)
+            # if (compare):
+            #     print("diff", np.amax(np.abs(self.mesh_vertices_0-mm0)) )
+            #     breakpoint()
+            self.sed_diff_z = np.array(self.sed_diff_z)
+            self.mesh_vertices = self.mesh_vertices_0.copy()
         self.mesh_vertices[:,2] = self.mesh_vertices_0[:,2] + self.sed_diff_z
         if (useFakeEncodedZ):
             self.mesh_vertices[:,2] = np.ceil(self.mesh_vertices[:,2])*1000 + np.array(list(range(self.mesh_vertices.shape[0])))*0.01
@@ -542,14 +594,14 @@ class UniformNodeGridFixedSizeMeshModel:
 
      
 
-    def updateMesh(self,tti:int):
+    def updateMesh(self,tti:int, optimized=False):
         """Construct the mesh positions at the given time index tti, and update the existing mesh with the new values
         """   
         import time
         assert self.mesh is not None
         self.tti = tti        
         st = time.time()
-        self.buildVertices(time_index=tti, useFakeEncodedZ=False)
+        self.buildVertices(time_index=tti, useFakeEncodedZ=False, optimized=optimized)
         delta = time.time() - st
         print("updatemesh delta 1", delta)
         st = time.time()
@@ -1102,7 +1154,29 @@ class UniformNodeGridFixedSizeMeshModel:
                 self.subsidence_at_nodes[iix,:] = nn.subsidence
             print("solve delay 1.3", time.time()-st)
 
-        
+
+        if (not skip_setup):
+            st = time.time()
+            # self.averageLABdepth = np.mean(np.array([ top_asth(n, self.tti) for n in self.node1D]))
+            top_of_sediments = self.subsidence_at_nodes
+            self.bottom_sed_id_at_nodes = [] 
+            self.top_sed_at_nodes = np.zeros([self.num_nodes, nn.subsidence.shape[0] ])
+            self.base_crust_at_nodes = np.zeros([self.num_nodes, nn.subsidence.shape[0] ])
+            self.base_lith_at_nodes = np.zeros([self.num_nodes, nn.subsidence.shape[0] ])
+            for k in range(0,self.numberOfSediments):
+                bottom_sed_id_at_nodes = np.zeros([self.num_nodes, nn.subsidence.shape[0] ])
+                for i in range(len(self.node1D)):
+                    nn = self.node1D[i]
+                    bottom_sed_id_at_nodes[i, :] = nn.sed[k,1,:]
+                self.bottom_sed_id_at_nodes.append(bottom_sed_id_at_nodes)
+            for i in range(len(self.node1D)):
+                nn = self.node1D[i]
+                self.top_sed_at_nodes[i,:] = nn.subsidence
+                self.base_crust_at_nodes[i,:] = nn.subsidence + nn.sed_thickness_ls + nn.crust_ls
+                self.base_lith_at_nodes[i,:]  = self.base_crust_at_nodes[i,:] + nn.lith_ls
+            print("solve delay 1.4", time.time()-st)
+
+
         st = time.time()
         self.sedimentsConductivitySekiguchi()
         print("solve delay 2", time.time()-st)
@@ -1112,9 +1186,10 @@ class UniformNodeGridFixedSizeMeshModel:
             self.bc = self.buildDirichletBC()
             print("delta C", time.time()-st)
         else:
-            st = time.time()
-            self.updateDBC()
-            print("delta C.2", time.time()-st)
+            pass 
+            # st = time.time()
+            # self.updateDBC()
+            # print("delta C.2", time.time()-st)
 
         t=0
         dt = time_step if (time_step>0) else  3600*24*365 * 5000000
@@ -1188,7 +1263,7 @@ class UniformNodeGridFixedSizeMeshModel:
         A = dolfinx.fem.petsc.assemble_matrix(bilinear_form, bcs=[self.bc])
         A.assemble()
         b = dolfinx.fem.petsc.create_vector(linear_form)
-        print("delta 2", time.time()-st)
+        print("delta 2.F", time.time()-st)
 
         st = time.time()
         comm = MPI.COMM_WORLD
@@ -1568,7 +1643,7 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
             else:
                 logger.info(f"Re-generating mesh vertices at {tti}")
                 tic()
-                mm2.updateMesh(tti)
+                mm2.updateMesh(tti, optimized=True)
                 toc(msg="update mesh")
             logger.info(f"Solving {tti}")
             posarr.append( mm2.mesh.geometry.x.copy() )

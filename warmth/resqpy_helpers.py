@@ -463,4 +463,129 @@ def write_hexa_grid_with_properties(filename, nodes, cells, modelTitle = "hexame
     model.store_epc()
 
 
+def write_hexa_grid_with_timeseries(filename, nodes_series, cells, modelTitle = "hexamesh",
+    Temp_per_vertex_series=None ):
+    """Writes the given hexahedral mesh, defined by arrays of nodes and cell indices, into a RESQML .epc file
+       Given SubsHeat properties are optionally written.
+ 
+       cells is an array of 8-arrays in which the nodes are ordered:     
+               7------6
+              /      /|
+             /      / |
+            4------5  |
+            |         |
+            |  3------2
+            | /      /
+            |/      /
+            0------1
+
+       NOTE: writing properties that are defines per-node (have 'nodes' as indexable element) requires a patched version of resqpy!
+    """
+
+    nodes = nodes_series[0]
+    node_count = len(nodes)
+    faces_per_cell = []
+    nodes_per_face = []
+    faces_dict = {}
+    faces_repeat = np.zeros(node_count*100, dtype = bool)
+
+    cell_face_is_right_handed = np.zeros( len(cells)*6, dtype = bool)
+    for ih,hexa in enumerate(cells):
+        faces= [[0,3,2,1], [0,1,5,4], [1,2,6,5], [2,3,7,6], [3,0,4,7], [4,5,6,7]]
+        for iq,quad in enumerate(faces):
+            face0 = [hexa[x] for x in quad ]
+            assert -1 not in face0
+            fkey0 = ( x for x in sorted(face0) )
+            #
+            # keep track of which faces are encountered once vs. more than once
+            # faces that are encountered the second time will need to use the reverse handedness
+            #
+            face_is_repeated = False
+            if (fkey0 not in faces_dict):
+                faces_dict[fkey0] = len(nodes_per_face)
+                nodes_per_face.extend(face0)
+                cell_face_is_right_handed[(ih*6 + iq)] = False
+            else:
+                face_is_repeated = True
+                cell_face_is_right_handed[(ih*6 + iq)] = True
+            fidx0 = faces_dict.get(fkey0)            
+            faces_per_cell.append(fidx0/4)
+            faces_repeat[int(fidx0/4)] = face_is_repeated
+    
+    set_cell_count = int(len(faces_per_cell)/6)
+    face_count = int(len(nodes_per_face)/4)
+
+
+    model = rq.new_model(filename)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+
+    times_in_years = [ max(int(t*1e6),1) for t in list(range(len(nodes_series)-1,-1,-1))]
+    gts = rts.GeologicTimeSeries.from_year_list(model, times_in_years, title="warmth simulation")
+    gts.create_xml()
+    rts.timeframe_for_time_series_uuid(model, gts.uuid)
+
+    # create an empty HexaGrid
+    hexa = rug.HexaGrid(model, title = modelTitle)
+    assert hexa.cell_shape == 'hexahedral'
+
+    # hand craft all attribute data
+    hexa.crs_uuid = model.uuid(obj_type = 'LocalDepth3dCrs')
+    assert hexa.crs_uuid is not None
+    assert bu.matching_uuids(hexa.crs_uuid, crs.uuid)
+    hexa.set_cell_count(set_cell_count)
+    # faces
+    hexa.face_count = face_count
+    hexa.faces_per_cell_cl = np.arange(6, 6 * set_cell_count + 1, 6, dtype = int)
+    hexa.faces_per_cell = np.array(faces_per_cell)
+
+    # nodes
+    hexa.node_count = node_count
+    hexa.nodes_per_face_cl = np.arange(4, 4 * face_count + 1, 4, dtype = int)
+    hexa.nodes_per_face = np.array(nodes_per_face)
+
+    # face handedness
+    hexa.cell_face_is_right_handed = cell_face_is_right_handed  # False for all faces for external cells
+
+    # points
+    hexa.points_cached = nodes
+
+    # basic validity check
+    hexa.check_hexahedral()
+
+    hexa.create_xml()
+    hexa.write_hdf5()
+
+    if hexa.property_collection is None:
+        hexa.property_collection = rqp.PropertyCollection(support = hexa)
+    pc = hexa.property_collection
+
+    # nodes0 = nodes.copy()
+    for time_index in range(len(nodes_series)-1,-1,-1):
+        # nodes2 = nodes0 + [0,0,time_index*10]
+        nodes2 = nodes_series[time_index]
+        pc.add_cached_array_to_imported_list(nodes2,
+                                                'dynamic nodes',
+                                                'points',
+                                                uom = 'm',
+                                                property_kind = 'length',
+                                                realization = 0,
+                                                time_index = time_index,
+                                                indexable_element = 'nodes',
+                                                points = True)
+        # active_array = np.ones([2160], dtype = bool)
+        tt = Temp_per_vertex_series[time_index]
+        pc.add_cached_array_to_imported_list(tt,
+                                                'Temperature',
+                                                'Temperature',
+                                                uom = 'degC',
+                                                property_kind = 'thermodynamic temperature',
+                                                realization = 0,
+                                                time_index = time_index,
+                                                indexable_element = 'nodes')
+                                                # points = True)
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = gts.uuid)
+
+    model.store_epc()
 

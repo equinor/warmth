@@ -71,7 +71,7 @@ def test_3d_compare():
     comm.Barrier()
     # if comm.rank == 0:            
     # mm2 = 
-    run_3d(model.builder,model.parameters,start_time=model.parameters.time_start,end_time=0, pad_num_nodes=2,writeout=False, base_flux=None)
+    mm2, posarr, Tarr = run_3d(model.builder,model.parameters,start_time=model.parameters.time_start,end_time=0, pad_num_nodes=2,writeout=False, base_flux=None)
 
     
     nnx = (model.builder.grid.num_nodes_x+2*mm2.padX) 
@@ -98,6 +98,9 @@ def test_3d_compare():
 
     max_abs_error = np.amax(np.abs(temp_1d_at_mesh_pos-temp_3d_mesh))
     max_abs_error_shallow = np.amax(np.abs(temp_1d_at_mesh_pos[dd_subset]-temp_3d_mesh[dd_subset]))    
+
+    print("Max error overall:", max_abs_error)
+    print("Max error <5000m:", max_abs_error_shallow)
 
     # assert (max_abs_error<25.0), "Temperature difference between 3D and 1D simulations is >25"
     # assert (max_abs_error_shallow<5.0),  "Temperature difference between 3D and 1D simulations is >5 in the sediments."

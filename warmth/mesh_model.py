@@ -11,7 +11,7 @@ from warmth.build import single_node, Builder
 from .parameters import Parameters
 from warmth.logging import logger
 from .mesh_utils import  top_crust,top_sed,thick_crust,  top_lith, top_asth, top_sed_id, bottom_sed_id,interpolateNode, interpolate_all_nodes
-from .resqpy_helpers import write_tetra_grid_with_properties, write_hexa_grid_with_properties,read_mesh_resqml_hexa
+from .resqpy_helpers import write_tetra_grid_with_properties, write_hexa_grid_with_timeseries, write_hexa_grid_with_properties,read_mesh_resqml_hexa
 def tic():
     #Homemade version of matlab tic and toc functions
     import time
@@ -233,13 +233,6 @@ class UniformNodeGridFixedSizeMeshModel:
             minY = np.amin(np.array ( [np.array(points_cached)[hi,1] for hi in h] ))
             poro0 = poro0_per_cell[i]
             lid0  = lid_to_keep[i]
-            # if (minY>40000) and poro0 < 0.8 and lid0>=0:
-            #     print("problem A", minY, poro0, i, h)
-            #     breakpoint()
-            # if (minY<40000) and poro0 > 0.8:
-            #     print("problem B", minY, poro0, i, h)
-            #     breakpoint()
-
 
         T_per_vertex = [ self.uh.x.array[reverse_reindex_order[i]] for i in range(self.mesh.geometry.x.shape[0]) if i in p_to_keep  ]
         age_per_vertex = [ self.mesh_vertices_age[reverse_reindex_order[i]] for i in range(self.mesh.geometry.x.shape[0]) if i in p_to_keep  ]
@@ -249,6 +242,86 @@ class UniformNodeGridFixedSizeMeshModel:
         write_hexa_grid_with_properties(filename_hex, np.array(points_cached), hexa_renumbered, "hexamesh",
             np.array(T_per_vertex), np.array(age_per_vertex), poro0_per_cell, decay_per_cell, density_per_cell,
             cond_per_cell, rhp_per_cell, lid_per_cell)
+        return filename_hex
+
+    def write_hexa_mesh_timeseries( self, out_path, posarr, Tarr):
+        """Prepares arrays and calls the RESQML output helper function for hexa meshes:  the lith and aesth are removed, and the remaining
+           vertices and cells are renumbered;  the sediment properties are prepared for output.
+
+           out_path: string: path to write the resqml model to (.epc and .h5 files)
+
+           returns the filename (of the .epc file) that was written 
+        """            
+        x_original_order = self.mesh.geometry.x[:].copy()
+        reverse_reindex_order = np.arange( self.mesh_vertices.shape[0] )
+        for ind,val in enumerate(self.mesh_reindex):
+            x_original_order[val,:] = self.mesh.geometry.x[ind,:]
+            reverse_reindex_order[val] = ind
+        hexaHedra, hex_data_layerID, hex_data_nodeID = self.buildHexahedra(keep_padding=False)
+
+        hexa_to_keep = []
+        p_to_keep = set()
+        lid_to_keep = []
+        cond_per_cell = []
+        cell_id_to_keep = []
+        for i,h in enumerate(hexaHedra):
+            lid0 = hex_data_layerID[i]
+            # 
+            # discard aesth and lith (layer IDs -2, -3)
+            #
+            if (lid0>=-1) and (lid0<100):
+                hexa_to_keep.append(h)
+                lid_to_keep.append(lid0)
+                # cell_id_to_keep.append(self.node_index[i])
+                cell_id_to_keep.append(hex_data_nodeID[i])
+                # minY = np.amin(np.array ( [x_original_order[hi,1] for hi in h] ))
+                # if abs( self.node1D[hex_data_nodeID[i]].Y - minY)>1:
+                #     print("weird Y:", minY, self.node1D[hex_data_nodeID[i]].Y, abs( self.node1D[hex_data_nodeID[i]].Y - minY), i, hex_data_nodeID[i])
+                #     breakpoint()
+                # k_cond_mean = []
+                for hi in h:
+                    p_to_keep.add(hi)
+                #     k_cond_mean.append(self.thermalCond.x.array[hi])
+                # cond_per_cell.append( np.mean(np.array(k_cond_mean)))
+
+        # poro0_per_cell = np.array( [ self.getSedimentPropForLayerID('phi', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ] )
+        # decay_per_cell = np.array( [ self.getSedimentPropForLayerID('decay', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ])
+        # density_per_cell = np.array( [ self.getSedimentPropForLayerID('solidus', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ])
+        # cond_per_cell = np.array( [ self.getSedimentPropForLayerID('k_cond', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ])
+        # rhp_per_cell = np.array( [ self.getSedimentPropForLayerID('rhp', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ])
+        # lid_per_cell = np.array(lid_to_keep)
+
+        points_cached_series = []
+        for j in range(len(posarr)):
+            x_original_order = posarr[j].copy()
+            # reverse_reindex_order = np.arange( self.mesh_vertices.shape[0] )
+            for ind,val in enumerate(self.mesh_reindex):
+                x_original_order[val,:] = posarr[j][ind,:]            
+            points_cached = []
+            point_original_to_cached = np.ones(self.mesh.geometry.x.shape[0], dtype = np.int32)  * (-1)
+            for i in range(self.mesh.geometry.x.shape[0]):
+                if (i in p_to_keep):
+                    point_original_to_cached[i] = len(points_cached)
+                    points_cached.append(x_original_order[i,:])
+            points_cached_series.append(np.array(points_cached))
+        hexa_renumbered = [ [point_original_to_cached[i] for i in hexa] for hexa in hexa_to_keep ]
+        
+        # for i,h in enumerate(hexa_renumbered):
+        #     minY = np.amin(np.array ( [np.array(points_cached)[hi,1] for hi in h] ))
+        #     poro0 = poro0_per_cell[i]
+        #     lid0  = lid_to_keep[i]
+
+        Temp_per_vertex_series = []
+        for j in range(len(Tarr)):            
+            # T_per_vertex = [ self.uh.x.array[reverse_reindex_order[i]] for i in range(self.mesh.geometry.x.shape[0]) if i in p_to_keep  ]
+            T_per_vertex = [ Tarr[j][reverse_reindex_order[i]] for i in range(self.mesh.geometry.x.shape[0]) if i in p_to_keep  ]
+            Temp_per_vertex_series.append(np.array(T_per_vertex))
+        # age_per_vertex = [ self.mesh_vertices_age[reverse_reindex_order[i]] for i in range(self.mesh.geometry.x.shape[0]) if i in p_to_keep  ]
+
+        from os import path
+        filename_hex = path.join(out_path, self.modelName+'_hexa_ts_'+str(self.tti)+'.epc')
+        write_hexa_grid_with_timeseries(filename_hex, points_cached_series, hexa_renumbered, "hexamesh",
+            Temp_per_vertex_series )
         return filename_hex
 
     def heatflow_at_crust_sed_boundary(self):
@@ -1625,6 +1698,7 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
     mms_tti = []
     tti = 0
     # base_flux = 0.0033
+    writeout_final = True
     time_solve = 0.0    
     posarr = []
     Tarr = []
@@ -1673,8 +1747,10 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
             logger.info(f"Simulated time step {tti}")
             bar.next()
     print("total time solve: " , time_solve)
-    if (writeout):
+    if (writeout_final):
         EPCfilename = mm2.write_hexa_mesh_resqml("temp/")
         print("RESQML model written to: " , EPCfilename)
+        EPCfilename_ts = mm2.write_hexa_mesh_timeseries("temp/", posarr, Tarr)
+        print("RESQML partial model with timeseries written to: ", EPCfilename_ts)
         read_mesh_resqml_hexa(EPCfilename)  # test reading of the .epc file
     return mm2,posarr,Tarr

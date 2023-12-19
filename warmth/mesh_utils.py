@@ -113,6 +113,18 @@ def volumeOfTet(points):
     bdcd = np.cross(bd,cd)
     return np.linalg.norm(np.dot(ad,bdcd))/6
 
+
+def volumeOfHex(points):
+    """ Computes the volume of a hexahedron, given as eight 3D-points
+    """ 
+    import numpy as np
+    tetsplit1 = [ [1,2,4,8], [1,2,5,8], [4,8,2,3], [2,3,7,8], [2,5,6,8], [2,6,7,8] ]
+    vol = 0.0
+    for f in tetsplit1:
+        tet = points[[p-1 for p in f],:]
+        vol = vol + volumeOfTet(tet)
+    return vol
+
 def interpolateNode(interpolationNodes: List[single_node], interpolationWeights=None) -> single_node:
     assert len(interpolationNodes)>0
     if interpolationWeights is None:

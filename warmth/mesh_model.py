@@ -177,11 +177,82 @@ class UniformNodeGridFixedSizeMeshModel:
 
            returns the filename (of the .epc file) that was written 
         """            
+        comm = MPI.COMM_WORLD
+        def boundary(x):
+            return np.full(x.shape[1], True)
+        entities = dolfinx.mesh.locate_entities(self.mesh, 0, boundary )
+        print("entities", type(entities))
+        nodes = dolfinx.cpp.mesh.entities_to_geometry(self.mesh, 0, entities, False)
+        print("nodes", type(nodes))
+        print("nodes", len(nodes))
         x_original_order = self.mesh.geometry.x[:].copy()
         reverse_reindex_order = np.arange( self.mesh_vertices.shape[0] )
-        for ind,val in enumerate(self.mesh_reindex):
-            x_original_order[val,:] = self.mesh.geometry.x[ind,:]
+        print("xx", x_original_order.shape, self.mesh.geometry.x[:].shape, np.amax(np.array(self.mesh_reindex)) )
+        # print(f"Rank {comm.rank} a: {a}")
+        
+        sub_mesh_0 = self.mesh.geometry.x
+        index_map_0 = self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0])))
+        # index_map_rev_0 = self.mesh.topology.index_map(0).global_to_local(list(range(len(self.mesh_reindex))))
+        mesh_reindex_0 = self.mesh_reindex
+        sub_temp_0 = self.uh.x.array
+        mesh_vertices_age_0 = self.mesh_vertices_age
+
+        sub_mesh_1 = comm.recv(source=1, tag=20)
+        index_map_1 = comm.recv(source=1, tag=21)
+        mesh_reindex_1 = comm.recv(source=1, tag=23)
+        sub_temp_1 = comm.recv(source=1, tag=24)
+        mesh_vertices_age_1 = comm.recv(source=1, tag=25)
+        # index_map_rev_1 = comm.recv(source=1, tag=22)
+        # comm.send(self.mesh.geometry.x, dest=0, tag=20)
+        # comm.send(self.mesh.topology.index_map(0), dest=0, tag=21)
+
+        print("received from rank 1", type(sub_mesh_1), type(index_map_1))
+        print("received from rank 1", sub_mesh_1.shape, np.amin(sub_mesh_1), np.amax(sub_mesh_1) )
+        print("received from rank 1", index_map_1.shape, np.amin(index_map_1), np.amax(index_map_1) )
+        # print("received from rank 1", index_map_rev_1.shape, np.amin(index_map_rev_1), np.amax(index_map_rev_1) )
+        print("received from rank 0", sub_mesh_0.shape, np.amin(sub_mesh_0), np.amax(sub_mesh_0) )
+        print("received from rank 0", index_map_0.shape, np.amin(index_map_0), np.amax(index_map_0) )
+        # print("received from rank 0", index_map_rev_0.shape, np.amin(index_map_rev_0), np.amax(index_map_rev_0) )
+
+
+        np.save("mesh_reindex_0.npy", mesh_reindex_0)
+        np.save("mesh_reindex_1.npy", mesh_reindex_1)
+        np.save("sm0.npy", sub_mesh_0)
+        np.save("sm1.npy", sub_mesh_1)
+        np.save("im0.npy", index_map_0)
+        np.save("im1.npy", index_map_1)
+
+        nv = np.amax(np.array([np.amax(index_map_0),np.amax(index_map_1)]))+1
+        x_original_order = np.ones( [nv,3], dtype= np.int32) * -1
+        reverse_reindex_order = np.arange( nv )
+        T_per_vertex = np.ones( nv, dtype= np.int32) * -1
+        age_per_vertex = np.ones( nv, dtype= np.int32) * -1
+
+        mri = np.arange( nv, dtype=np.int32)
+        submesh = np.ones( nv, dtype= np.int32) * -1
+        subind = np.ones( nv, dtype= np.int32) * -1
+        for ind in mri:
+            itemindex_0 = np.where(index_map_0 == ind)
+            if len(itemindex_0[0])>0:
+                submesh[ind] = 0
+                subind[ind] = itemindex_0[0]
+            else:
+                itemindex_1 = np.where(index_map_1 == ind)
+                submesh[ind] = 1
+                subind[ind] = itemindex_1[0]
+
+        for ind,val in enumerate(mesh_reindex_0):
+            x_original_order[val,:] = sub_mesh_0[ind,:] 
             reverse_reindex_order[val] = ind
+            T_per_vertex[val] = sub_temp_0[ind]
+            age_per_vertex[val] = mesh_vertices_age_0[ind]
+
+        for ind,val in enumerate(mesh_reindex_1):
+            x_original_order[val,:] = sub_mesh_1[ind,:]
+            reverse_reindex_order[val] = ind
+            T_per_vertex[val] = sub_temp_1[ind]
+            age_per_vertex[val] = mesh_vertices_age_1[ind]
+
         hexaHedra, hex_data_layerID, hex_data_nodeID = self.buildHexahedra(keep_padding=False)
 
         hexa_to_keep = []
@@ -222,8 +293,8 @@ class UniformNodeGridFixedSizeMeshModel:
         lid_per_cell = np.array(lid_to_keep)
 
         points_cached = []
-        point_original_to_cached = np.ones(self.mesh.geometry.x.shape[0], dtype = np.int32)  * (-1)
-        for i in range(self.mesh.geometry.x.shape[0]):
+        point_original_to_cached = np.ones(nv, dtype = np.int32)  * (-1)
+        for i in range(nv):
             if (i in p_to_keep):
                 point_original_to_cached[i] = len(points_cached)
                 points_cached.append(x_original_order[i,:])
@@ -234,13 +305,17 @@ class UniformNodeGridFixedSizeMeshModel:
             poro0 = poro0_per_cell[i]
             lid0  = lid_to_keep[i]
 
-        T_per_vertex = [ self.uh.x.array[reverse_reindex_order[i]] for i in range(self.mesh.geometry.x.shape[0]) if i in p_to_keep  ]
-        age_per_vertex = [ self.mesh_vertices_age[reverse_reindex_order[i]] for i in range(self.mesh.geometry.x.shape[0]) if i in p_to_keep  ]
+        # T_per_vertex = [ self.uh.x.array[reverse_reindex_order[i]] for i in range(nv) if i in p_to_keep  ]
+        # age_per_vertex = [ self.mesh_vertices_age[reverse_reindex_order[i]] for i in range(nv) if i in p_to_keep  ]
+        # T_per_vertex = [ 20+p[2]*0.025 for p in points_cached ]
+        # age_per_vertex = [ 20+p[0]*0.025 for p in points_cached ]
+        T_per_vertex_keep = [ T_per_vertex[i] for i in range(nv) if i in p_to_keep ]
+        age_per_vertex_keep = [ age_per_vertex[i] for i in range(nv) if i in p_to_keep ]
 
         from os import path
         filename_hex = path.join(out_path, self.modelName+'_hexa_'+str(self.tti)+'.epc')
         write_hexa_grid_with_properties(filename_hex, np.array(points_cached), hexa_renumbered, "hexamesh",
-            np.array(T_per_vertex), np.array(age_per_vertex), poro0_per_cell, decay_per_cell, density_per_cell,
+            np.array(T_per_vertex_keep), np.array(age_per_vertex_keep), poro0_per_cell, decay_per_cell, density_per_cell,
             cond_per_cell, rhp_per_cell, lid_per_cell)
         return filename_hex
 
@@ -801,7 +876,16 @@ class UniformNodeGridFixedSizeMeshModel:
         mpi_print(f"Ghost nodes (global numbering): {self.mesh.topology.index_map(0).ghosts}")
         # mpi_print("Cell (dim = 2) to vertex (dim = 0) connectivity")
         # mpi_print(self.mesh.topology.connectivity(3, 0))
-        
+
+        mpi_print(f"Dir local cells: {type(self.mesh.topology.index_map(3))} {dir(self.mesh.topology.index_map(3))}")
+        mpi_print(f"Dir local verts: {dir(self.mesh.topology.index_map(0))}")  # local_to_global ! ?
+        mpi_print(f"Type local verts: {type(self.mesh.topology.index_map(0))}")
+
+        # Rank 1: Dir local cells: ['__class__', '__delattr__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', 'create_submap', 'ghosts', 'local_range', 'local_to_global', 'num_ghosts', 'owners', 'size_global', 'size_local']
+        # Rank 1: Dir local verts: ['__class__', '__delattr__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', 'create_submap', 'ghosts', 'local_range', 'local_to_global', 'num_ghosts', 'owners', 'size_global', 'size_local']
+        # lattr__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', 'create_submap', 'ghosts', 'local_range', 'local_to_global', 'num_ghosts', 'owners', 'size_global', 'size_local']
+
+
         # obtain original vertex order as encoded in z-pos digits
 
         zz  = self.mesh.geometry.x[:,2].copy()
@@ -1748,9 +1832,23 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
             bar.next()
     print("total time solve: " , time_solve)
     if (writeout_final):
-        EPCfilename = mm2.write_hexa_mesh_resqml("temp/")
-        print("RESQML model written to: " , EPCfilename)
-        EPCfilename_ts = mm2.write_hexa_mesh_timeseries("temp/", posarr, Tarr)
-        print("RESQML partial model with timeseries written to: ", EPCfilename_ts)
-        read_mesh_resqml_hexa(EPCfilename)  # test reading of the .epc file
+        comm.Barrier()
+        if comm.rank>=1:
+            comm.send(mm2.mesh.geometry.x, dest=0, tag=20)
+            comm.send(mm2.mesh.topology.index_map(0).local_to_global(list(range(mm2.mesh.geometry.x.shape[0]))) , dest=0, tag=21)
+            comm.send(mm2.mesh_reindex, dest=0, tag=23)
+
+            comm.send(mm2.uh.x.array, dest=0, tag=24)
+            comm.send(mm2.mesh_vertices_age, dest=0, tag=25)
+            # age_per_vertex = [ self.mesh_vertices_age[reverse_reindex_order[i]] for i in range(nv) if i in p_to_keep  ]
+
+            # index_map_rev_1 = mm2.mesh.topology.index_map(0).global_to_local(list(range(len(mm2.mesh_reindex))))
+            # comm.send(index_map_rev_1 , dest=0, tag=22)
+            # print(f"Rank {comm.rank} a: {a}")        
+        if comm.rank==0:
+            EPCfilename = mm2.write_hexa_mesh_resqml("temp/")
+            print("RESQML model written to: " , EPCfilename)
+            # EPCfilename_ts = mm2.write_hexa_mesh_timeseries("temp/", posarr, Tarr)
+            # print("RESQML partial model with timeseries written to: ", EPCfilename_ts)
+            read_mesh_resqml_hexa(EPCfilename)  # test reading of the .epc file
     return mm2,posarr,Tarr

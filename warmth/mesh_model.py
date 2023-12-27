@@ -168,6 +168,45 @@ class UniformNodeGridFixedSizeMeshModel:
             cond_per_cell, rhp_per_cell, lid_per_cell)
         return filename
 
+    def receive_mpi_messages(self):
+        comm = MPI.COMM_WORLD
+        import time
+        st = time.time()
+
+        self.sub_mesh_s = [self.mesh.geometry.x]
+        self.index_map_s = [self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0])))]
+        self.mesh_reindex_s = [self.mesh_reindex]
+        self.sub_temp_s = [self.uh.x.array]
+        self.mesh_vertices_age_s = [self.mesh_vertices_age]
+
+        for i in range(1,comm.size):
+            self.sub_mesh_s.append(comm.recv(source=i, tag=((i-1)*10)+20))
+            self.index_map_s.append(comm.recv(source=i, tag=((i-1)*10)+21))
+            self.mesh_reindex_s.append(comm.recv(source=i, tag=((i-1)*10)+23))
+            self.sub_temp_s.append(comm.recv(source=i, tag=((i-1)*10)+24))
+            self.mesh_vertices_age_s.append(comm.recv(source=i, tag=((i-1)*10)+25))
+        
+        nv = np.amax(np.array( [np.amax(index_map) for index_map in self.index_map_s ] )) + 1   # no. vertices/nodes
+        mri = np.arange( nv, dtype=np.int32)
+
+        self.x_original_order = np.ones( [nv,3], dtype= np.int32) * -1
+        self.T_per_vertex = np.ones( nv, dtype= np.int32) * -1
+        self.age_per_vertex = np.ones( nv, dtype= np.int32) * -1
+
+        for k in range(len(self.mesh_reindex_s)):
+            for ind,val in enumerate(self.mesh_reindex_s[k]):
+                self.x_original_order[val,:] = self.sub_mesh_s[k][ind,:] 
+                self.T_per_vertex[val] = self.sub_temp_s[k][ind]
+                self.age_per_vertex[val] = self.mesh_vertices_age_s[k][ind]
+
+        delta = time.time() - st
+        print("receive_mpi_messages delta", delta)
+
+    def get_node_pos_and_temp(self):
+        #
+        # This function can only be called after all MPI compute processes have finished and receive_mpi_messages has been called.
+        #
+        return self.x_original_order, self.T_per_vertex
 
     def write_hexa_mesh_resqml( self, out_path):
         """Prepares arrays and calls the RESQML output helper function for hexa meshes:  the lith and aesth are removed, and the remaining
@@ -178,80 +217,88 @@ class UniformNodeGridFixedSizeMeshModel:
            returns the filename (of the .epc file) that was written 
         """            
         comm = MPI.COMM_WORLD
-        def boundary(x):
-            return np.full(x.shape[1], True)
-        entities = dolfinx.mesh.locate_entities(self.mesh, 0, boundary )
-        print("entities", type(entities))
-        nodes = dolfinx.cpp.mesh.entities_to_geometry(self.mesh, 0, entities, False)
-        print("nodes", type(nodes))
-        print("nodes", len(nodes))
-        x_original_order = self.mesh.geometry.x[:].copy()
-        reverse_reindex_order = np.arange( self.mesh_vertices.shape[0] )
-        print("xx", x_original_order.shape, self.mesh.geometry.x[:].shape, np.amax(np.array(self.mesh_reindex)) )
+        # def boundary(x):
+        #     return np.full(x.shape[1], True)
+        # entities = dolfinx.mesh.locate_entities(self.mesh, 0, boundary )
+        # print("entities", type(entities))
+        # nodes = dolfinx.cpp.mesh.entities_to_geometry(self.mesh, 0, entities, False)
+        # print("nodes", type(nodes))
+        # print("nodes", len(nodes))
+        # x_original_order = self.mesh.geometry.x[:].copy()
+        # reverse_reindex_order = np.arange( self.mesh_vertices.shape[0] )
+        # print("xx", x_original_order.shape, self.mesh.geometry.x[:].shape, np.amax(np.array(self.mesh_reindex)) )
         # print(f"Rank {comm.rank} a: {a}")
         
-        sub_mesh_0 = self.mesh.geometry.x
-        index_map_0 = self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0])))
-        # index_map_rev_0 = self.mesh.topology.index_map(0).global_to_local(list(range(len(self.mesh_reindex))))
-        mesh_reindex_0 = self.mesh_reindex
-        sub_temp_0 = self.uh.x.array
-        mesh_vertices_age_0 = self.mesh_vertices_age
+        # sub_mesh_0 = self.mesh.geometry.x
+        # index_map_0 = self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0])))
+        # # index_map_rev_0 = self.mesh.topology.index_map(0).global_to_local(list(range(len(self.mesh_reindex))))
+        # mesh_reindex_0 = self.mesh_reindex
+        # sub_temp_0 = self.uh.x.array
+        # mesh_vertices_age_0 = self.mesh_vertices_age
 
-        sub_mesh_1 = comm.recv(source=1, tag=20)
-        index_map_1 = comm.recv(source=1, tag=21)
-        mesh_reindex_1 = comm.recv(source=1, tag=23)
-        sub_temp_1 = comm.recv(source=1, tag=24)
-        mesh_vertices_age_1 = comm.recv(source=1, tag=25)
+        # sub_mesh_1 = self.sub_mesh_1
+        # index_map_1 = self.index_map_1
+        # mesh_reindex_1 = self.mesh_reindex_1
+        # sub_temp_1 = self.sub_temp_1
+        # mesh_vertices_age_1 = self.mesh_vertices_age_1
         # index_map_rev_1 = comm.recv(source=1, tag=22)
         # comm.send(self.mesh.geometry.x, dest=0, tag=20)
         # comm.send(self.mesh.topology.index_map(0), dest=0, tag=21)
 
-        print("received from rank 1", type(sub_mesh_1), type(index_map_1))
-        print("received from rank 1", sub_mesh_1.shape, np.amin(sub_mesh_1), np.amax(sub_mesh_1) )
-        print("received from rank 1", index_map_1.shape, np.amin(index_map_1), np.amax(index_map_1) )
-        # print("received from rank 1", index_map_rev_1.shape, np.amin(index_map_rev_1), np.amax(index_map_rev_1) )
-        print("received from rank 0", sub_mesh_0.shape, np.amin(sub_mesh_0), np.amax(sub_mesh_0) )
-        print("received from rank 0", index_map_0.shape, np.amin(index_map_0), np.amax(index_map_0) )
-        # print("received from rank 0", index_map_rev_0.shape, np.amin(index_map_rev_0), np.amax(index_map_rev_0) )
+        # sub_mesh_0 = self.sub_mesh_s[0]
+        # index_map_0 = self.index_map_s[0]
+        # mesh_reindex_0 = self.mesh_reindex_s[0]
+        # sub_temp_0 = self.sub_temp_s[0]
+        # mesh_vertices_age_0 = self.mesh_vertices_age_s[0]
 
+        # sub_mesh_1 = self.sub_mesh_s[1]
+        # index_map_1 = self.index_map_s[1]
+        # mesh_reindex_1 = self.mesh_reindex_s[1]
+        # sub_temp_1 = self.sub_temp_s[1]
+        # mesh_vertices_age_1 = self.mesh_vertices_age_s[1]
 
-        np.save("mesh_reindex_0.npy", mesh_reindex_0)
-        np.save("mesh_reindex_1.npy", mesh_reindex_1)
-        np.save("sm0.npy", sub_mesh_0)
-        np.save("sm1.npy", sub_mesh_1)
-        np.save("im0.npy", index_map_0)
-        np.save("im1.npy", index_map_1)
+        # print("received from rank 1", type(sub_mesh_1), type(index_map_1))
+        # print("received from rank 1", sub_mesh_1.shape, np.amin(sub_mesh_1), np.amax(sub_mesh_1) )
+        # print("received from rank 1", index_map_1.shape, np.amin(index_map_1), np.amax(index_map_1) )
+        # # print("received from rank 1", index_map_rev_1.shape, np.amin(index_map_rev_1), np.amax(index_map_rev_1) )
+        # print("received from rank 0", sub_mesh_0.shape, np.amin(sub_mesh_0), np.amax(sub_mesh_0) )
+        # print("received from rank 0", index_map_0.shape, np.amin(index_map_0), np.amax(index_map_0) )
+        # # print("received from rank 0", index_map_rev_0.shape, np.amin(index_map_rev_0), np.amax(index_map_rev_0) )
 
-        nv = np.amax(np.array([np.amax(index_map_0),np.amax(index_map_1)]))+1
-        x_original_order = np.ones( [nv,3], dtype= np.int32) * -1
-        reverse_reindex_order = np.arange( nv )
-        T_per_vertex = np.ones( nv, dtype= np.int32) * -1
-        age_per_vertex = np.ones( nv, dtype= np.int32) * -1
+        # np.save("mesh_reindex_0.npy", mesh_reindex_0)
+        # np.save("sm0.npy", sub_mesh_0)
+        # np.save("im0.npy", index_map_0)
+        # np.save("mesh_reindex_1.npy", mesh_reindex_1)
+        # np.save("sm1.npy", sub_mesh_1)
+        # np.save("im1.npy", index_map_1)
 
-        mri = np.arange( nv, dtype=np.int32)
-        submesh = np.ones( nv, dtype= np.int32) * -1
-        subind = np.ones( nv, dtype= np.int32) * -1
-        for ind in mri:
-            itemindex_0 = np.where(index_map_0 == ind)
-            if len(itemindex_0[0])>0:
-                submesh[ind] = 0
-                subind[ind] = itemindex_0[0]
-            else:
-                itemindex_1 = np.where(index_map_1 == ind)
-                submesh[ind] = 1
-                subind[ind] = itemindex_1[0]
+        nv = np.amax(np.array([np.amax(index_map) for index_map in self.index_map_s])) +1  # no. vertices/nodes
+        # x_original_order = np.ones( [nv,3], dtype= np.int32) * -1
+        # T_per_vertex = np.ones( nv, dtype= np.int32) * -1
+        # age_per_vertex = np.ones( nv, dtype= np.int32) * -1
 
-        for ind,val in enumerate(mesh_reindex_0):
-            x_original_order[val,:] = sub_mesh_0[ind,:] 
-            reverse_reindex_order[val] = ind
-            T_per_vertex[val] = sub_temp_0[ind]
-            age_per_vertex[val] = mesh_vertices_age_0[ind]
+        # # mri = np.arange( nv, dtype=np.int32)
+        # # submesh = np.ones( nv, dtype= np.int32) * -1
+        # # subind = np.ones( nv, dtype= np.int32) * -1
+        # # for ind in mri:
+        # #     itemindex_0 = np.where(index_map_0 == ind)
+        # #     if len(itemindex_0[0])>0:
+        # #         submesh[ind] = 0
+        # #         subind[ind] = itemindex_0[0]
+        # #     else:
+        # #         itemindex_1 = np.where(index_map_1 == ind)
+        # #         submesh[ind] = 1
+        # #         subind[ind] = itemindex_1[0]
 
-        for ind,val in enumerate(mesh_reindex_1):
-            x_original_order[val,:] = sub_mesh_1[ind,:]
-            reverse_reindex_order[val] = ind
-            T_per_vertex[val] = sub_temp_1[ind]
-            age_per_vertex[val] = mesh_vertices_age_1[ind]
+        # for ind,val in enumerate(mesh_reindex_0):
+        #     x_original_order[val,:] = sub_mesh_0[ind,:] 
+        #     T_per_vertex[val] = sub_temp_0[ind]
+        #     age_per_vertex[val] = mesh_vertices_age_0[ind]
+
+        # for ind,val in enumerate(mesh_reindex_1):
+        #     x_original_order[val,:] = sub_mesh_1[ind,:]
+        #     T_per_vertex[val] = sub_temp_1[ind]
+        #     age_per_vertex[val] = mesh_vertices_age_1[ind]
 
         hexaHedra, hex_data_layerID, hex_data_nodeID = self.buildHexahedra(keep_padding=False)
 
@@ -270,7 +317,7 @@ class UniformNodeGridFixedSizeMeshModel:
                 lid_to_keep.append(lid0)
                 # cell_id_to_keep.append(self.node_index[i])
                 cell_id_to_keep.append(hex_data_nodeID[i])
-                minY = np.amin(np.array ( [x_original_order[hi,1] for hi in h] ))
+                minY = np.amin(np.array ( [self.x_original_order[hi,1] for hi in h] ))
                 if abs( self.node1D[hex_data_nodeID[i]].Y - minY)>1:
                     print("weird Y:", minY, self.node1D[hex_data_nodeID[i]].Y, abs( self.node1D[hex_data_nodeID[i]].Y - minY), i, hex_data_nodeID[i])
                     breakpoint()
@@ -297,7 +344,7 @@ class UniformNodeGridFixedSizeMeshModel:
         for i in range(nv):
             if (i in p_to_keep):
                 point_original_to_cached[i] = len(points_cached)
-                points_cached.append(x_original_order[i,:])
+                points_cached.append(self.x_original_order[i,:])
         hexa_renumbered = [ [point_original_to_cached[i] for i in hexa] for hexa in hexa_to_keep ]
         
         for i,h in enumerate(hexa_renumbered):
@@ -309,8 +356,8 @@ class UniformNodeGridFixedSizeMeshModel:
         # age_per_vertex = [ self.mesh_vertices_age[reverse_reindex_order[i]] for i in range(nv) if i in p_to_keep  ]
         # T_per_vertex = [ 20+p[2]*0.025 for p in points_cached ]
         # age_per_vertex = [ 20+p[0]*0.025 for p in points_cached ]
-        T_per_vertex_keep = [ T_per_vertex[i] for i in range(nv) if i in p_to_keep ]
-        age_per_vertex_keep = [ age_per_vertex[i] for i in range(nv) if i in p_to_keep ]
+        T_per_vertex_keep = [ self.T_per_vertex[i] for i in range(nv) if i in p_to_keep ]
+        age_per_vertex_keep = [ self.age_per_vertex[i] for i in range(nv) if i in p_to_keep ]
 
         from os import path
         filename_hex = path.join(out_path, self.modelName+'_hexa_'+str(self.tti)+'.epc')
@@ -1786,6 +1833,7 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
     time_solve = 0.0    
     posarr = []
     Tarr = []
+    print("################ ", comm.size, comm.rank )
     with Bar('Processing...',check_tty=False, max=(start_time-end_time)) as bar:
         for tti in range(start_time, end_time-1,-1): #start from oldest
             rebuild_mesh = (tti==start_time)
@@ -1834,18 +1882,18 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
     if (writeout_final):
         comm.Barrier()
         if comm.rank>=1:
-            comm.send(mm2.mesh.geometry.x, dest=0, tag=20)
-            comm.send(mm2.mesh.topology.index_map(0).local_to_global(list(range(mm2.mesh.geometry.x.shape[0]))) , dest=0, tag=21)
-            comm.send(mm2.mesh_reindex, dest=0, tag=23)
-
-            comm.send(mm2.uh.x.array, dest=0, tag=24)
-            comm.send(mm2.mesh_vertices_age, dest=0, tag=25)
+            comm.send(mm2.mesh.geometry.x, dest=0, tag=((comm.rank-1)*10)+20)
+            comm.send(mm2.mesh.topology.index_map(0).local_to_global(list(range(mm2.mesh.geometry.x.shape[0]))) , dest=0, tag=((comm.rank-1)*10)+21)
+            comm.send(mm2.mesh_reindex, dest=0, tag=((comm.rank-1)*10)+23)
+            comm.send(mm2.uh.x.array, dest=0, tag=((comm.rank-1)*10)+24)
+            comm.send(mm2.mesh_vertices_age, dest=0, tag=((comm.rank-1)*10)+25)
             # age_per_vertex = [ self.mesh_vertices_age[reverse_reindex_order[i]] for i in range(nv) if i in p_to_keep  ]
 
             # index_map_rev_1 = mm2.mesh.topology.index_map(0).global_to_local(list(range(len(mm2.mesh_reindex))))
             # comm.send(index_map_rev_1 , dest=0, tag=22)
             # print(f"Rank {comm.rank} a: {a}")        
         if comm.rank==0:
+            mm2.receive_mpi_messages()
             EPCfilename = mm2.write_hexa_mesh_resqml("temp/")
             print("RESQML model written to: " , EPCfilename)
             # EPCfilename_ts = mm2.write_hexa_mesh_timeseries("temp/", posarr, Tarr)

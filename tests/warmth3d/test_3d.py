@@ -8,7 +8,7 @@ import pickle
 
 def test_3d_compare():
     comm = MPI.COMM_WORLD
-    if comm.rank == 0:
+    if comm.rank == 100:
         maps_dir = Path("./docs/notebooks/data/")
         model = warmth.Model()
 
@@ -23,7 +23,7 @@ def test_3d_compare():
         model.builder.input_horizons=inputs
 
 
-        inc = 1000
+        inc = 500
         model.builder.define_geometry(maps_dir/"0.gri",xinc=inc,yinc=inc,fformat="irap_binary")
 
         model.builder.extract_nodes(4,maps_dir)
@@ -67,12 +67,11 @@ def test_3d_compare():
 
     comm.Barrier()
     import pickle
-    model = pickle.load( open( "model-out.p", "rb" ) )
+    model = pickle.load( open( "model-out-inc_500.p", "rb" ) )
     comm.Barrier()
     # if comm.rank == 0:            
     # mm2 = 
     mm2, posarr, Tarr = run_3d(model.builder,model.parameters,start_time=model.parameters.time_start,end_time=0, pad_num_nodes=2,writeout=False, base_flux=None)
-
     
     comm.Barrier()
     if comm.rank == 0:            
@@ -86,14 +85,21 @@ def test_3d_compare():
         nn = model.builder.nodes[hy-mm2.padX][hx-mm2.padX]
         dd = nn._depth_out[:,0]
 
+        mm2_pos, mm2_temp = mm2.get_node_pos_and_temp()
+
         node_ind = hy*nnx + hx
         # v_per_n = int(mm2.mesh_vertices.shape[0]/(model.builder.grid.num_nodes_y*model.builder.grid.num_nodes_x))
-        v_per_n = int(mm2.mesh_vertices.shape[0]/(mm2.num_nodes))
+        v_per_n = int(mm2_pos.shape[0]/(mm2.num_nodes))
 
         temp_1d = np.nan_to_num(nn.temperature_out[:,0], nan=5.0)
-        temp_3d_ind = np.array([ np.where([mm2.mesh_reindex==i])[1][0] for i in range(node_ind*v_per_n, (node_ind+1)*v_per_n) ] )
-        dd_mesh = mm2.mesh.geometry.x[temp_3d_ind,2] - mm2.sed_diff_z[range(node_ind*v_per_n, (node_ind+1)*v_per_n)]
-        temp_3d_mesh = mm2.u_n.x.array[temp_3d_ind]
+        
+        # temp_3d_ind = np.array([ np.where([mm2.mesh_reindex==i])[1][0] for i in range(node_ind*v_per_n, (node_ind+1)*v_per_n) ] )
+        temp_3d_ind = np.array([ i for i in range(node_ind*v_per_n, (node_ind+1)*v_per_n) ] )
+
+        # dd_mesh = mm2.mesh.geometry.x[temp_3d_ind,2] - mm2.sed_diff_z[range(node_ind*v_per_n, (node_ind+1)*v_per_n)]
+        dd_mesh = mm2_pos[temp_3d_ind,2] - mm2.sed_diff_z[range(node_ind*v_per_n, (node_ind+1)*v_per_n)]
+        # temp_3d_mesh = mm2.u_n.x.array[temp_3d_ind]
+        temp_3d_mesh = mm2_temp[temp_3d_ind]
 
         temp_1d_at_mesh_pos = np.interp(dd_mesh, dd, temp_1d)
         dd_subset = np.where(dd_mesh<5000)

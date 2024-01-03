@@ -8,7 +8,8 @@ import pickle
 
 def test_3d_compare():
     comm = MPI.COMM_WORLD
-    if comm.rank == 100:
+    inc = 2000
+    if comm.rank == 0:
         maps_dir = Path("./docs/notebooks/data/")
         model = warmth.Model()
 
@@ -22,8 +23,6 @@ def test_3d_compare():
         inputs.loc[6]=[182,"182.gri",None,"Erosive"]
         model.builder.input_horizons=inputs
 
-
-        inc = 500
         model.builder.define_geometry(maps_dir/"0.gri",xinc=inc,yinc=inc,fformat="irap_binary")
 
         model.builder.extract_nodes(4,maps_dir)
@@ -53,8 +52,8 @@ def test_3d_compare():
         model.simulator.run(save=True,purge=True, parallel=False)
 
         import pickle
-        pickle.dump( model, open( "model-out.p", "wb" ) )
-        model = pickle.load( open( "model-out.p", "rb" ) )
+        pickle.dump( model, open( f"model-out-inc_{inc}.p", "wb" ) )
+        # model = pickle.load( open( "model-out.p", "rb" ) )
 
         try:
             os.mkdir('mesh')
@@ -67,11 +66,11 @@ def test_3d_compare():
 
     comm.Barrier()
     import pickle
-    model = pickle.load( open( "model-out-inc_500.p", "rb" ) )
+    model = pickle.load( open( f"model-out-inc_{inc}.p", "rb" ) )
     comm.Barrier()
     # if comm.rank == 0:            
     # mm2 = 
-    mm2, posarr, Tarr = run_3d(model.builder,model.parameters,start_time=model.parameters.time_start,end_time=0, pad_num_nodes=2,writeout=False, base_flux=None)
+    mm2 = run_3d(model.builder,model.parameters,start_time=model.parameters.time_start,end_time=0, pad_num_nodes=2,writeout=False, base_flux=None)
     
     comm.Barrier()
     if comm.rank == 0:            
@@ -85,7 +84,7 @@ def test_3d_compare():
         nn = model.builder.nodes[hy-mm2.padX][hx-mm2.padX]
         dd = nn._depth_out[:,0]
 
-        mm2_pos, mm2_temp = mm2.get_node_pos_and_temp()
+        mm2_pos, mm2_temp = mm2.get_node_pos_and_temp(-1)
 
         node_ind = hy*nnx + hx
         # v_per_n = int(mm2.mesh_vertices.shape[0]/(model.builder.grid.num_nodes_y*model.builder.grid.num_nodes_x))

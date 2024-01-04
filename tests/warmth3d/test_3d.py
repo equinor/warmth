@@ -8,7 +8,7 @@ import pickle
 
 def test_3d_compare():
     comm = MPI.COMM_WORLD
-    inc = 2500
+    inc = 2000
     if comm.rank == 0:
         maps_dir = Path("./docs/notebooks/data/")
         model = warmth.Model()
@@ -85,10 +85,7 @@ def test_3d_compare():
         mm2_pos, mm2_temp = mm2.get_node_pos_and_temp(-1)
 
         node_ind = hy*nnx + hx
-        # v_per_n = int(mm2.mesh_vertices.shape[0]/(model.builder.grid.num_nodes_y*model.builder.grid.num_nodes_x))
         v_per_n = int(mm2_pos.shape[0]/(mm2.num_nodes))
-        print("v_per_n", mm2_pos.shape[0]/(mm2.num_nodes), mm2_pos.shape[0], (mm2.num_nodes), v_per_n )
-        print("shape ", model.builder.grid.num_nodes_x, model.builder.grid.num_nodes_y)
 
         temp_1d = np.nan_to_num(nn.temperature_out[:,0], nan=5.0)
         

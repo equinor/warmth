@@ -286,10 +286,10 @@ class UniformNodeGridFixedSizeMeshModel:
                 points_cached.append(x_original_order[i,:])
         hexa_renumbered = [ [point_original_to_cached[i] for i in hexa] for hexa in hexa_to_keep ]
         
-        for i,h in enumerate(hexa_renumbered):
-            minY = np.amin(np.array ( [np.array(points_cached)[hi,1] for hi in h] ))
-            poro0 = poro0_per_cell[i]
-            lid0  = lid_to_keep[i]
+        # for i,h in enumerate(hexa_renumbered):
+        #     minY = np.amin(np.array ( [np.array(points_cached)[hi][1] for hi in h] ))
+        #     poro0 = poro0_per_cell[i]
+        #     lid0  = lid_to_keep[i]
 
         T_per_vertex_keep = [ T_per_vertex[i] for i in range(nv) if i in p_to_keep ]
         age_per_vertex_keep = [ self.age_per_vertex[i] for i in range(nv) if i in p_to_keep ]

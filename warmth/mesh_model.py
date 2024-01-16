@@ -265,11 +265,11 @@ class UniformNodeGridFixedSizeMeshModel:
                 #     if (pp<0.7) and lid0>=0:
                 #         print("weird phi: ", pp, minY, self.node1D[hex_data_nodeID[i]].Y, abs( self.node1D[hex_data_nodeID[i]].Y - minY), i, hex_data_nodeID[i])
                 #         breakpoint()
-                k_cond_mean = []
+                # k_cond_mean = []
                 for hi in h:
                     p_to_keep.add(hi)
-                    k_cond_mean.append(self.thermalCond.x.array[hi])
-                cond_per_cell.append( np.mean(np.array(k_cond_mean)))
+                    # k_cond_mean.append(self.thermalCond.x.array[hi])   # the actual, Sekiguchi-derived conductivitues
+                # cond_per_cell.append( np.mean(np.array(k_cond_mean)))
 
         poro0_per_cell = np.array( [ self.getSedimentPropForLayerID('phi', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ] )
         decay_per_cell = np.array( [ self.getSedimentPropForLayerID('decay', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ])
@@ -668,11 +668,9 @@ class UniformNodeGridFixedSizeMeshModel:
         st = time.time()
         self.buildVertices(time_index=tti, useFakeEncodedZ=False, optimized=optimized)
         delta = time.time() - st
-        print("updatemesh delta 1", delta)
         st = time.time()
         self.updateVertices()        
         delta = time.time() - st
-        print("updatemesh delta 2", delta)
         self.posarr.append(self.mesh.geometry.x.copy())
         self.time_indices.append(self.tti)
 
@@ -1268,7 +1266,6 @@ class UniformNodeGridFixedSizeMeshModel:
         import time
         for i in range(num_steps):
             t += dt
-            st = time.time()
             # Update the right hand side reusing the initial vector
             with b.localForm() as loc_b:
                 loc_b.set(0)
@@ -1291,7 +1288,6 @@ class UniformNodeGridFixedSizeMeshModel:
             # Update solution at previous time step (u_n)
             # diffnorm = np.sum(np.abs(self.u_n.x.array - self.uh.x.array)) / self.u_n.x.array.shape[0]
             self.u_n.x.array[:] = self.uh.x.array
-            print("delay compute ", time.time()-st)
             # comm.Barrier()
         self.Tarr.append(self.uh.x.array[:].copy())
         # print("latest Tarr", self.Tarr[-1], np.mean(self.Tarr[-1]))

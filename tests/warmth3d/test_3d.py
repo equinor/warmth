@@ -9,7 +9,8 @@ import pickle
 def test_3d_compare():
     comm = MPI.COMM_WORLD
     inc = 2000
-    if comm.rank == 0:
+    model_pickled = f"model-out-inc_{inc}.p"
+    if comm.rank == 0 and not os.path.isfile(model_pickled):
         maps_dir = Path("./docs/notebooks/data/")
         model = warmth.Model()
 
@@ -49,24 +50,24 @@ def test_3d_compare():
         model.parameters.tetha = 0
         model.parameters.alphav = 0
 
-        model.simulator.run(save=True,purge=True, parallel=False)
+        model.simulator.run(save=True, purge=True, parallel=True)
 
-        import pickle
-        pickle.dump( model, open( f"model-out-inc_{inc}.p", "wb" ) )
-        model = pickle.load( open( f"model-out-inc_{inc}.p", "rb" ) )
+        if comm.rank == 0:
 
-        try:
-            os.mkdir('mesh')
-        except FileExistsError:
-            pass
-        try:
-            os.mkdir('temp')
-        except FileExistsError:
-            pass
+            pickle.dump( model, open( model_pickled, "wb" ) )
+            model = pickle.load( open( model_pickled, "rb" ) )
+            try:
+                os.mkdir('mesh')
+            except FileExistsError:
+                pass
+            try:
+                os.mkdir('temp')
+            except FileExistsError:
+                pass
 
     comm.Barrier()
-    import pickle
-    model = pickle.load( open( f"model-out-inc_{inc}.p", "rb" ) )
+
+    model = pickle.load( open( model_pickled, "rb" ) )
     comm.Barrier()
     mm2 = run_3d(model.builder,model.parameters,start_time=model.parameters.time_start,end_time=0, pad_num_nodes=2,writeout=False, base_flux=None)
     
@@ -74,8 +75,6 @@ def test_3d_compare():
     if comm.rank == 0:            
         nnx = (model.builder.grid.num_nodes_x+2*mm2.padX) 
         nny = (model.builder.grid.num_nodes_y+2*mm2.padX) 
-        # hx = model.builder.grid.num_nodes_x // 2
-        # hy = model.builder.grid.num_nodes_y // 2
         hx = nnx // 2
         hy = nny // 2
 

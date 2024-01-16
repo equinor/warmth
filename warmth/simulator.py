@@ -111,17 +111,29 @@ class Simulator:
         node._dump(p)
         return p
 
-    def dump_input_data(self):
+    def dump_input_data(self, use_mpi=False):
         p = []
         parameter_data_path = self._parameters_path
-        self._builder.parameters.dump(self._parameters_path)
-        if isinstance(self._builder.grid,type(None)) is False:
-            self._builder.grid.dump(self._grid_path)
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as th:
-            futures = [th.submit(self.dump_input_nodes,  i)
-                       for i in self._builder.iter_node() if i is not False]
-            for future in concurrent.futures.as_completed(futures):
-                p.append([parameter_data_path, future.result()])
+
+        from mpi4py import MPI
+        comm = MPI.COMM_WORLD        
+        if (comm.rank==0):
+            self._builder.parameters.dump(self._parameters_path)
+            if isinstance(self._builder.grid,type(None)) is False:
+                self._builder.grid.dump(self._grid_path)                
+            if use_mpi:
+                from mpi4py.futures import MPIPoolExecutor
+                with MPIPoolExecutor(max_workers=10) as th:
+                    futures = [th.submit(self.dump_input_nodes,  i)
+                            for i in self._builder.iter_node() if i is not False]
+                    for future in concurrent.futures.as_completed(futures):
+                        p.append([parameter_data_path, future.result()])
+            else:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=10) as th:
+                    futures = [th.submit(self.dump_input_nodes,  i)
+                            for i in self._builder.iter_node() if i is not False]
+                    for future in concurrent.futures.as_completed(futures):
+                        p.append([parameter_data_path, future.result()])
         return p
 
     def setup_directory(self, purge=False):
@@ -137,7 +149,7 @@ class Simulator:
 
     def run(self, save=False,purge=False,parallel=True):
         if parallel:
-            self._parellel_run(save,purge)
+            self._parellel_run(save,purge,use_mpi=True)
         else:
             if self.simulate_every != 1:
                 logger.warning("Serial simulation will run full simulation on all nodes")
@@ -177,40 +189,65 @@ class Simulator:
         if count >0:
             logger.info(f"Setting {count} nodes to partial simulation")
         return count
-    def _parellel_run(self, save,purge):
+
+
+    def _parellel_run(self, save, purge, use_mpi=False):
         filtered = self._filter_full_sim()
-        self.setup_directory(purge)
-        p = self.dump_input_data()
-        #self._builder.nodes=self._builder.grid.make_grid_arr()
-        with concurrent.futures.ProcessPoolExecutor(mp_context=get_context('spawn')) as executor:
-            results = [executor.submit(runWorker, i) for i in p]
-            with Bar('Processing...',check_tty=False, max=len(p)) as bar:
-                for future in concurrent.futures.as_completed(results):
-                    bar.next()
-                    try:
-                        path_result = future.result()
-                        n= load_node(path_result) # numerical model error should still resovle
-                        if save==False:
-                            path_result.unlink()
-                        self.put_node_to_grid(n)
-                    except Exception as e:
-                        logger.error(e)
+        from mpi4py import MPI
+        comm = MPI.COMM_WORLD        
+        if (comm.rank==0):
+            self.setup_directory(purge)
+        comm.Barrier()
+        p = self.dump_input_data(use_mpi=use_mpi)
+        comm.Barrier()
+
+        if use_mpi:
+            from mpi4py.futures import MPIPoolExecutor
+            with MPIPoolExecutor(max_workers=10) as executor:
+                results = [executor.submit(runWorker, i) for i in p]
+                with Bar('Processing...',check_tty=False, max=len(p)) as bar:
+                    for future in concurrent.futures.as_completed(results):
+                        bar.next()
+                        try:
+                            path_result = future.result()
+                            n= load_node(path_result) # numerical model error should still resovle
+                            if save==False:
+                                path_result.unlink()
+                            self.put_node_to_grid(n)
+                        except Exception as e:
+                            logger.error(e)
+        else:
+            with concurrent.futures.ProcessPoolExecutor(mp_context=get_context('spawn')) as executor:
+                results = [executor.submit(runWorker, i) for i in p]
+                with Bar('Processing...',check_tty=False, max=len(p)) as bar:
+                    for future in concurrent.futures.as_completed(results):
+                        bar.next()
+                        try:
+                            path_result = future.result()
+                            n= load_node(path_result) # numerical model error should still resovle
+                            if save==False:
+                                path_result.unlink()
+                            self.put_node_to_grid(n)
+                        except Exception as e:
+                            logger.error(e)
         # pick up node with no results (failed)
-        for node_path in self._nodes_path.iterdir():
-            str_f = str(node_path)
-            if str_f.endswith(".pickle"):
-                n=load_node(node_path)
-                if save==False:
-                    node_path.unlink()
-                self.put_node_to_grid(n)
-                logger.warning(f"No result file for node X:{n.X}, Y:{n.Y}")
-        if save==False:
-            from shutil import rmtree
-            rmtree(self._builder.parameters.output_path)
-        if filtered >0:
-            logger.info(f"Interpolating results back to {filtered} partial simulated nodes")
-            interp_res= Results_interpolator(self._builder,len(p)-filtered)
-            interp_res.run()
+        comm.Barrier()
+        if comm.rank==0:                            
+            for node_path in self._nodes_path.iterdir():
+                str_f = str(node_path)
+                if str_f.endswith(".pickle"):
+                    n=load_node(node_path)
+                    if save==False:
+                        node_path.unlink()
+                    self.put_node_to_grid(n)
+                    logger.warning(f"No result file for node X:{n.X}, Y:{n.Y}")
+            if save==False:
+                from shutil import rmtree
+                rmtree(self._builder.parameters.output_path)
+            if filtered >0:
+                logger.info(f"Interpolating results back to {filtered} partial simulated nodes")
+                interp_res= Results_interpolator(self._builder,len(p)-filtered)
+                interp_res.run()
         return
     def put_node_to_grid(self,node:single_node):
         self._builder.nodes[node.indexer[0]][node.indexer[1]]=node

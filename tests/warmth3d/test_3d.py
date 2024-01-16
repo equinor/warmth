@@ -5,12 +5,15 @@ import os
 import numpy as np
 from mpi4py import MPI
 import pickle
+import time
 
 def test_3d_compare():
     comm = MPI.COMM_WORLD
-    inc = 2000
+    inc = 1000
     model_pickled = f"model-out-inc_{inc}.p"
     if comm.rank == 0 and not os.path.isfile(model_pickled):
+        global runtime_1D_sim
+        st = time.time()
         maps_dir = Path("./docs/notebooks/data/")
         model = warmth.Model()
 
@@ -50,23 +53,23 @@ def test_3d_compare():
         model.parameters.tetha = 0
         model.parameters.alphav = 0
 
-        model.simulator.run(save=True, purge=True, parallel=True)
+        model.simulator.run(save=True, purge=True, parallel=True, use_mpi=(comm.size>1))
 
-        if comm.rank == 0:
+        runtime_1D_sim = time.time() - st
+        print("Total time 1D simulations:", runtime_1D_sim)
 
-            pickle.dump( model, open( model_pickled, "wb" ) )
-            model = pickle.load( open( model_pickled, "rb" ) )
-            try:
-                os.mkdir('mesh')
-            except FileExistsError:
-                pass
-            try:
-                os.mkdir('temp')
-            except FileExistsError:
-                pass
+        pickle.dump( model, open( model_pickled, "wb" ) )
+        model = pickle.load( open( model_pickled, "rb" ) )
+        try:
+            os.mkdir('mesh')
+        except FileExistsError:
+            pass
+        try:
+            os.mkdir('temp')
+        except FileExistsError:
+            pass
 
     comm.Barrier()
-
     model = pickle.load( open( model_pickled, "rb" ) )
     comm.Barrier()
     mm2 = run_3d(model.builder,model.parameters,start_time=model.parameters.time_start,end_time=0, pad_num_nodes=2,writeout=False, base_flux=None)
@@ -113,3 +116,5 @@ def test_3d_compare():
 
 if __name__ == "__main__":
     test_3d_compare()
+    if 'runtime_1D_sim' in globals():
+        print("Total time 1D simulations:", runtime_1D_sim)   

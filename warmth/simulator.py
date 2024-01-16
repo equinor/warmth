@@ -147,9 +147,9 @@ class Simulator:
         self._nodes_path.mkdir(parents=True, exist_ok=True)
         return
 
-    def run(self, save=False,purge=False,parallel=True):
+    def run(self, save=False,purge=False,parallel=True,use_mpi=True):
         if parallel:
-            self._parellel_run(save,purge,use_mpi=True)
+            self._parellel_run(save,purge,use_mpi=use_mpi)
         else:
             if self.simulate_every != 1:
                 logger.warning("Serial simulation will run full simulation on all nodes")
@@ -197,13 +197,11 @@ class Simulator:
         comm = MPI.COMM_WORLD        
         if (comm.rank==0):
             self.setup_directory(purge)
-        comm.Barrier()
         p = self.dump_input_data(use_mpi=use_mpi)
-        comm.Barrier()
 
         if use_mpi:
             from mpi4py.futures import MPIPoolExecutor
-            with MPIPoolExecutor(max_workers=10) as executor:
+            with MPIPoolExecutor(max_workers=20) as executor:
                 results = [executor.submit(runWorker, i) for i in p]
                 with Bar('Processing...',check_tty=False, max=len(p)) as bar:
                     for future in concurrent.futures.as_completed(results):
@@ -231,7 +229,6 @@ class Simulator:
                         except Exception as e:
                             logger.error(e)
         # pick up node with no results (failed)
-        comm.Barrier()
         if comm.rank==0:                            
             for node_path in self._nodes_path.iterdir():
                 str_f = str(node_path)

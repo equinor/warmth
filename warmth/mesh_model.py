@@ -665,12 +665,8 @@ class UniformNodeGridFixedSizeMeshModel:
         import time
         assert self.mesh is not None
         self.tti = tti        
-        st = time.time()
         self.buildVertices(time_index=tti, useFakeEncodedZ=False, optimized=optimized)
-        delta = time.time() - st
-        st = time.time()
         self.updateVertices()        
-        delta = time.time() - st
         self.posarr.append(self.mesh.geometry.x.copy())
         self.time_indices.append(self.tti)
 
@@ -802,7 +798,6 @@ class UniformNodeGridFixedSizeMeshModel:
 
     def TemperatureGradient(self, x):
         self.averageLABdepth = np.mean(np.array([ top_asth(n, self.tti) for n in self.node1D]))
-        print("self.averageLABdepth", self.averageLABdepth)
 
         nz = (x[2,:] - self.Zmin) / (self.averageLABdepth - self.Zmin)
         nz[nz>1.0] = 1.0
@@ -837,10 +832,8 @@ class UniformNodeGridFixedSizeMeshModel:
         import time
         def boundary(x):
             return np.full(x.shape[1], True)
-        st = time.time()
         entities = dolfinx.mesh.locate_entities(self.mesh, 3, boundary )
         tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh, 3, entities, False)
-        print("sekiguchi step 0", time.time()-st)
         self.layer_id_per_vertex = [ [] for _ in range(self.mesh.geometry.x.shape[0]) ]
         ## 
 
@@ -1175,7 +1168,7 @@ class UniformNodeGridFixedSizeMeshModel:
         import time
         st = time.time()
         self.sedimentsConductivitySekiguchi()
-        print("solve delay 2", time.time()-st)
+        # print("solve delay 2", time.time()-st)
 
         t=0
         dt = time_step if (time_step>0) else  3600*24*365 * 5000000
@@ -1189,8 +1182,6 @@ class UniformNodeGridFixedSizeMeshModel:
         #  solver setup, see:
         #  https://jorgensd.github.io/dolfinx-tutorial/chapter2/diffusion_code.html
         #
-
-        st = time.time()
 
         u = ufl.TrialFunction(self.V)
         v = ufl.TestFunction(self.V)
@@ -1251,17 +1242,13 @@ class UniformNodeGridFixedSizeMeshModel:
         A = dolfinx.fem.petsc.assemble_matrix(bilinear_form, bcs=[self.bc])
         A.assemble()
         b = dolfinx.fem.petsc.create_vector(linear_form)
-        print("delta 2.F", time.time()-st)
 
-        st = time.time()
         comm = MPI.COMM_WORLD
         solver = PETSc.KSP().create(self.mesh.comm)
 
         solver.setOperators(A)
         solver.setType(PETSc.KSP.Type.PREONLY)
         solver.getPC().setType(PETSc.PC.Type.LU)
-
-        print("delta F", time.time()-st)
 
         import time
         for i in range(num_steps):
@@ -1639,7 +1626,7 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
             mms_tti.append(tti)
             logger.info(f"Simulated time step {tti}")
             bar.next()
-    print("total time solve: " , time_solve)
+    print("total time solve 3D: " , time_solve)
     if (writeout_final):
         comm.Barrier()
         if comm.rank>=1:

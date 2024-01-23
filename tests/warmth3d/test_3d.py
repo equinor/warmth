@@ -1,3 +1,4 @@
+import pytest
 import warmth
 from pathlib import Path
 from warmth.mesh_model import run_3d
@@ -7,6 +8,7 @@ from mpi4py import MPI
 import pickle
 import time
 
+@pytest.mark.mpi
 def test_3d_compare():
     comm = MPI.COMM_WORLD
     inc = 1000
@@ -52,7 +54,7 @@ def test_3d_compare():
         model.parameters.bflux = False 
         model.parameters.tetha = 0
         model.parameters.alphav = 0
-
+        print(f"Using MPI? {comm.size>1}")
         model.simulator.run(save=True, purge=True, parallel=True, use_mpi=(comm.size>1))
 
         runtime_1D_sim = time.time() - st

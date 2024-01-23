@@ -30,6 +30,7 @@ matplotlib = "^3.8.0"
 ipywidgets = "^8.1.1"
 widgetsnbextension = "^4.0.9"
 nbsphinx = "^0.9.3"
+pytest-mpi = "^0.6"
 
 
 [build-system]

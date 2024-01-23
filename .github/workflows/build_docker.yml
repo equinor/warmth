@@ -1,10 +1,10 @@
-name: Build docker
+name: Build docker for unittest
 
 on:
   push:
     branches: [ "main" ]
     paths:
-      - '.devcontainer/Dockerfile'
+      - '/Dockerfile'
   workflow_dispatch:
 permissions:
       id-token: write

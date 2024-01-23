@@ -171,13 +171,13 @@ class UniformNodeGridFixedSizeMeshModel:
             cond_per_cell, rhp_per_cell, lid_per_cell)
         return filename
 
-    def send_mpi_messages(self):
-        comm = MPI.COMM_WORLD
-        comm.send(mm2.mesh.topology.index_map(0).local_to_global(list(range(mm2.mesh.geometry.x.shape[0]))) , dest=0, tag=((comm.rank-1)*10)+21)
-        comm.send(mm2.mesh_reindex, dest=0, tag=((comm.rank-1)*10)+23)
-        comm.send(mm2.mesh_vertices_age, dest=0, tag=((comm.rank-1)*10)+25)
-        comm.send(self.posarr, dest=0, tag=( (comm.rank-1)*10)+20)
-        comm.send(self.Tarr, dest=0, tag=( (comm.rank-1)*10)+24)
+    # def send_mpi_messages(self):
+    #     comm = MPI.COMM_WORLD
+    #     comm.send(mm2.mesh.topology.index_map(0).local_to_global(list(range(mm2.mesh.geometry.x.shape[0]))) , dest=0, tag=((comm.rank-1)*10)+21)
+    #     comm.send(mm2.mesh_reindex, dest=0, tag=((comm.rank-1)*10)+23)
+    #     comm.send(mm2.mesh_vertices_age, dest=0, tag=((comm.rank-1)*10)+25)
+    #     comm.send(self.posarr, dest=0, tag=( (comm.rank-1)*10)+20)
+    #     comm.send(self.Tarr, dest=0, tag=( (comm.rank-1)*10)+24)
 
     def receive_mpi_messages(self):
         comm = MPI.COMM_WORLD

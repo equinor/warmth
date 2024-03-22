@@ -15,9 +15,6 @@ on:
   workflow_dispatch:
   push:
     branches: [main, dev]
-    paths-ignore:
-      - '.devcontainer/**'
-      - '.github/**'
     paths:
       - 'warmth/warmth3d/**'
   pull_request:

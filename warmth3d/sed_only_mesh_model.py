@@ -361,7 +361,7 @@ class UniformNodeGridFixedSizeMeshModel:
         self.mesh_vertices = self.mesh_vertices_0.copy()
         self.mesh_vertices[:,2] = self.mesh_vertices_0[:,2] + self.sed_diff_z
         if (useFakeEncodedZ):
-            self.mesh_vertices[:,2] = np.ceil(self.mesh_vertices[:,2])*1000 + np.array(list(range(self.mesh_vertices.shape[0])))*0.01
+            self.mesh_vertices[:,2] = np.ceil(self.mesh_vertices[:,2])*10000 + np.array(list(range(self.mesh_vertices.shape[0])))*0.001
             # zz = self.mesh_vertices[:,2].copy()
             # zz2=np.mod(zz,1000)
             # # mesh_reindex = (1e-4+zz2*10).astype(np.int32)
@@ -534,8 +534,8 @@ class UniformNodeGridFixedSizeMeshModel:
         #
         # obtain original vertex order as encoded in z-pos digits
         zz  = self.mesh.geometry.x[:,2].copy()
-        zz2 = np.mod(zz,1000)
-        self.mesh_reindex = (1e-4+zz2*100).astype(np.int32)
+        zz2 = np.mod(zz,10000)
+        self.mesh_reindex = (1e-4+zz2*1000).astype(np.int32)
         self.mesh0_geometry_x = self.mesh.geometry.x.copy()
 
     def normalizedZ(self, z):

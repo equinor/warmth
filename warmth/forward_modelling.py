@@ -282,7 +282,8 @@ class Forward_model:
 
                 lower_idx = np.argwhere(coord_new > key_depth)
                 if lower_idx.size == 0:
-                    raise Exception
+                    # raise Exception
+                    lower_idx = len(coord_new)-1
                 else:
                     lower_idx = lower_idx[0][0]
 

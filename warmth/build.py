@@ -720,11 +720,10 @@ class Builder:
                                                 'rhp': rhp, 'phi': phi, 'decay': decay, 'solidus': solidus, 'liquidus': liquidus,'strat':strat,'horizonIndex':inputRef})
                     df = df.sort_values(by=["topage"],ignore_index=True)
 
-    
+                    # print(df)
                     #df.reset_index(drop=True,inplace=True)
-                    df.at[2, 'top'] = np.nan
-            
-                    df.at[3, 'top'] = np.nan
+                    # df.at[2, 'top'] = np.nan            
+                    # df.at[3, 'top'] = np.nan
                     checker = self._check_nan_sed(df)
 
                     if checker is False:

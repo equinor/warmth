@@ -382,7 +382,7 @@ def write_hexa_grid_with_properties(filename, nodes, cells, modelTitle = "hexame
 
     if Temp_per_vertex is not None:
         _ = rqp.Property.from_array(model,
-                                    Temp_per_vertex,
+                                    Temp_per_vertex.astype(np.float32),
                                     source_info = 'SubsHeat',
                                     keyword = 'Temperature',
                                     support_uuid = hexa.uuid,
@@ -392,7 +392,7 @@ def write_hexa_grid_with_properties(filename, nodes, cells, modelTitle = "hexame
 
     if age_per_vertex is not None:
         _ = rqp.Property.from_array(model,
-                                    age_per_vertex,
+                                    age_per_vertex.astype(np.float32),
                                     source_info = 'SubsHeat',
                                     keyword = 'Age',
                                     support_uuid = hexa.uuid,
@@ -413,7 +413,7 @@ def write_hexa_grid_with_properties(filename, nodes, cells, modelTitle = "hexame
          
     if poro0_per_cell is not None:
         _ = rqp.Property.from_array(model,
-                                    poro0_per_cell,
+                                    poro0_per_cell.astype(np.float32),
                                     source_info = 'SubsHeat',
                                     keyword = 'Porosity_initial',
                                     support_uuid = hexa.uuid,
@@ -422,7 +422,7 @@ def write_hexa_grid_with_properties(filename, nodes, cells, modelTitle = "hexame
                                     uom = 'm3/m3')
     if decay_per_cell is not None:
         _ = rqp.Property.from_array(model,
-                                    decay_per_cell,
+                                    decay_per_cell.astype(np.float32),
                                     source_info = 'SubsHeat',
                                     keyword = 'Porosity_decay',
                                     support_uuid = hexa.uuid,
@@ -431,7 +431,7 @@ def write_hexa_grid_with_properties(filename, nodes, cells, modelTitle = "hexame
                                     uom = 'Euc')
     if density_per_cell is not None:
         _ = rqp.Property.from_array(model,
-                                    density_per_cell,
+                                    density_per_cell.astype(np.float32),
                                     source_info = 'SubsHeat',
                                     keyword = 'Density_solid',
                                     support_uuid = hexa.uuid,
@@ -443,7 +443,7 @@ def write_hexa_grid_with_properties(filename, nodes, cells, modelTitle = "hexame
         # we write thermal conductivity as its inverse, the thermal insulance
         #
         _ = rqp.Property.from_array(model,
-                                    np.reciprocal(cond_per_cell),
+                                    np.reciprocal(cond_per_cell).astype(np.float32),
                                     source_info = 'SubsHeat',
                                     keyword = 'insulance_thermal',
                                     support_uuid = hexa.uuid,
@@ -452,7 +452,7 @@ def write_hexa_grid_with_properties(filename, nodes, cells, modelTitle = "hexame
                                     uom = 'deltaK.m2/W')
     if rhp_per_cell is not None:
         _ = rqp.Property.from_array(model,
-                                    rhp_per_cell,
+                                    rhp_per_cell.astype(np.float32),
                                     source_info = 'SubsHeat',
                                     keyword = 'Radiogenic_heat_production',
                                     support_uuid = hexa.uuid,
@@ -563,7 +563,7 @@ def write_hexa_grid_with_timeseries(filename, nodes_series, cells, modelTitle = 
     # nodes0 = nodes.copy()
     for time_index in range(len(nodes_series)-1,-1,-1):
         # nodes2 = nodes0 + [0,0,time_index*10]
-        nodes2 = nodes_series[time_index]
+        nodes2 = nodes_series[time_index].astype(np.float32)
         pc.add_cached_array_to_imported_list(nodes2,
                                                 'dynamic nodes',
                                                 'points',
@@ -574,7 +574,7 @@ def write_hexa_grid_with_timeseries(filename, nodes_series, cells, modelTitle = 
                                                 indexable_element = 'nodes',
                                                 points = True)
         # active_array = np.ones([2160], dtype = bool)
-        tt = Temp_per_vertex_series[time_index]
+        tt = Temp_per_vertex_series[time_index].astype(np.float32)
         pc.add_cached_array_to_imported_list(tt,
                                                 'Temperature',
                                                 'Temperature',

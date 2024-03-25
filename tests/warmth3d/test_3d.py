@@ -61,7 +61,7 @@ def test_3d_compare():
         print("Total time 1D simulations:", runtime_1D_sim)
 
         pickle.dump( model, open( model_pickled, "wb" ) )
-        model = pickle.load( open( model_pickled, "rb" ) )
+        # model = pickle.load( open( model_pickled, "rb" ) )
         try:
             os.mkdir('mesh')
         except FileExistsError:

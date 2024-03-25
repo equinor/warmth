@@ -515,13 +515,10 @@ class UniformNodeGridFixedSizeMeshModel:
             return 0
 
 
-    def buildVertices(self, time_index=0, useFakeEncodedZ=False, optimized=False):
+    def buildVertices(self, time_index=0, optimized=False):
         """Determine vertex positions, node-by-node.
            For every node, the same number of vertices is added (one per sediment, one per crust, lith, asth, and one at the bottom)
            Degenerate vertices (e.g. at nodes where sediment is yet to be deposited or has been eroded) are avoided by a small shift, kept in self.sed_diff_z
-           
-           When the option useFakeEncodedZ is set, the z-values are repurposed to encode the index of the vertex in the original, deterministic indexing.
-           This is necessary because dolfinx will re-index the vertices upon mesh generation. 
         """           
         tti = time_index
         self.tti = time_index
@@ -548,14 +545,10 @@ class UniformNodeGridFixedSizeMeshModel:
                         zpos = xxT + base_of_current_sediments
                         aa = np.concatenate([aa,np.array([zpos])])
 
-            # zp = base_of_last_sediments+ (base_crust-base_of_last_sediments)*(i/self.numElemInCrust) 
             base_of_last_sediments = (xxT+self.bottom_sed_id_at_nodes[-1][:,tti]) if (len(self.bottom_sed_id_at_nodes)>0) else xxT
 
             for i in range(1,self.numElemInCrust+1):
                 zp = base_of_last_sediments+ (bc-base_of_last_sediments)*(i/self.numElemInCrust) 
-                # self.mesh_vertices_0.append( [ node.X, node.Y, base_of_last_sediments+ (base_crust-base_of_last_sediments)*(i/self.numElemInCrust) ] )
-                # self.sed_diff_z.append(0.0)
-                # self.mesh_vertices_age_unsorted.append(1000)
                 aa = np.concatenate([aa,np.array([zp])])
 
             for i in range(1,self.numElemInLith+1):
@@ -595,8 +588,6 @@ class UniformNodeGridFixedSizeMeshModel:
                         self.sed_diff_z.append(-self.minimumCellThick*(self.numberOfSedimentCells - (ss*self.numElemPerSediment+j) ))
                         age_of_previous = node.sediments.baseage[ss-1] if (ss>0) else 0.0
                         self.mesh_vertices_age_unsorted.append( age_of_previous + ((j+1) / self.numElemPerSediment) * (node.sediments.baseage[ss]-age_of_previous) )  # append interpolatedbase age of current sediment
-                # if (ind==97) and (tti==0):
-                #     breakpoint()
                 if (ind==0):
                     delta = time.time() - st
                     print("delta 2", delta)
@@ -630,8 +621,6 @@ class UniformNodeGridFixedSizeMeshModel:
             self.sed_diff_z = np.array(self.sed_diff_z)
             self.mesh_vertices = self.mesh_vertices_0.copy()
         self.mesh_vertices[:,2] = self.mesh_vertices_0[:,2] + self.sed_diff_z
-        if (useFakeEncodedZ):
-            self.mesh_vertices[:,2] = np.ceil(self.mesh_vertices[:,2])*1000 + np.array(list(range(self.mesh_vertices.shape[0])))*0.01
 
     def updateVertices(self):
         """Update the mesh vertex positions using the values in self.mesh_vertices, and using the known dolfinx-induded reindexing
@@ -651,7 +640,7 @@ class UniformNodeGridFixedSizeMeshModel:
         """Construct a new mesh at the given time index tti, and determine the vertex re-indexing induced by dolfinx
         """        
         self.tti = tti
-        self.buildVertices(time_index=tti, useFakeEncodedZ=True)
+        self.buildVertices(time_index=tti)
         logger.info("Built vertices")
         self.constructMesh()
         logger.info("Built mesh")
@@ -665,7 +654,7 @@ class UniformNodeGridFixedSizeMeshModel:
         import time
         assert self.mesh is not None
         self.tti = tti        
-        self.buildVertices(time_index=tti, useFakeEncodedZ=False, optimized=optimized)
+        self.buildVertices(time_index=tti, optimized=optimized)
         self.updateVertices()        
         self.posarr.append(self.mesh.geometry.x.copy())
         self.time_indices.append(self.tti)
@@ -789,10 +778,8 @@ class UniformNodeGridFixedSizeMeshModel:
         mpi_print(f"Dir local verts: {dir(self.mesh.topology.index_map(0))}")  # local_to_global ! ?
         mpi_print(f"Type local verts: {type(self.mesh.topology.index_map(0))}")
 
-        # obtain original vertex order as encoded in z-pos digits
-        zz  = self.mesh.geometry.x[:,2].copy()
-        zz2 = np.mod(zz,1000)
-        self.mesh_reindex = (1e-4+zz2*100).astype(np.int32)
+        # store original vertex order 
+        self.mesh_reindex = np.array(self.mesh.geometry.input_global_indices).astype(np.int32)
         self.mesh0_geometry_x = self.mesh.geometry.x.copy()
 
 

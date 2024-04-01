@@ -10,8 +10,6 @@ import resqpy.unstructured as rug
 import resqpy.time_series as rts
 
 #
-#  Our example resqml model can be read using the read_mesh_resqml function below.. 
-#  read_mesh_resqml("/path/mapA-961-nodes-182_0.epc")
 # 
 #
 
@@ -30,12 +28,10 @@ def read_mesh_resqml(epcfilename, meshTitle = 'tetramesh'):
     assert tetra_uuid is not None
     tetra = rug.TetraGrid(model, uuid = tetra_uuid)
     assert tetra is not None
-    print(tetra.title, tetra.node_count, tetra.cell_count, tetra.cell_shape)
+    print(f"Mesh {tetra.title}: {tetra.node_count} nodes, {tetra.cell_count} cells, {tetra.cell_shape} cell shape")
     assert tetra.cell_shape == 'tetrahedral'
     
-    print( tetra.points_ref().shape )   # numpy array of vertex positions
     cells = np.array( [ tetra.distinct_node_indices_for_cell(i) for i in range(tetra.cell_count) ]  ) # cell indices are read using this function(?)
-    print( cells.shape )   # numpy array of vertex positions
     
     tetra.check_tetra()
 
@@ -48,7 +44,6 @@ def read_mesh_resqml(epcfilename, meshTitle = 'tetramesh'):
     temp_prop = rqp.Property(model, uuid = temp_uuid)
     assert temp_prop.uom() == 'degC'
     assert temp_prop.indexable_element() == 'nodes'   # properties are defined either on nodes or on cells
-    print( temp_prop.array_ref().shape, temp_prop.array_ref()[0:10] )  # .array_ref() exposes the values as numpy array
 
     layerID_uuid = model.uuid(title = 'LayerID')
     assert layerID_uuid is not None
@@ -56,13 +51,13 @@ def read_mesh_resqml(epcfilename, meshTitle = 'tetramesh'):
     # assert layerID_prop.uom() == 'Euc'
     assert layerID_prop.is_continuous() == False
     assert layerID_prop.indexable_element() == 'cells'
-    print( layerID_prop.array_ref().shape, layerID_prop.array_ref()[0:10] )  # .array_ref() exposes the values as numpy array
+    # print( layerID_prop.array_ref().shape, layerID_prop.array_ref()[0:10] )  # .array_ref() exposes the values as numpy array
  
     titles=['Temperature', 'Age', 'LayerID', 'Porosity_initial', 'Porosity_decay', 'Density_solid', 'insulance_thermal', 'Radiogenic_heat_production']
     for title in titles:
         prop_uuid = model.uuid(title = title)
         prop = rqp.Property(model, uuid = prop_uuid)
-        print(title, prop.indexable_element(), prop.uom(), prop.array_ref()[0:10] )
+        print(f"Property {title}: defined on {prop.indexable_element()}, unit {prop.uom()}, first values: {prop.array_ref()[0:10]}")
     
 def write_tetra_grid_with_properties(filename, nodes, cells, modelTitle = "tetramesh",
     Temp_per_vertex=None, age_per_vertex=None, poro0_per_cell=None, decay_per_cell=None, density_per_cell=None,

@@ -34,7 +34,7 @@ jobs:
       GITHUB_TOKEN_WORKFLOW: ${{ secrets.GITHUB_TOKEN }}
 
   deploy:
-    needs: [test3d, test1d, snyk, docs]
+    needs: [test3d, test1d, snyk]
     environment: deploy
     runs-on: ubuntu-latest
 

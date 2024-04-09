@@ -421,13 +421,11 @@ class UniformNodeGridFixedSizeMeshModel:
         return 0
 
 
-    def buildVertices(self, time_index=0, useFakeEncodedZ=False):
+    def buildVertices(self, time_index=0):
         """Determine vertex positions, node-by-node.
            For every node, the same number of vertices is added (one per sediment, one per crust, lith, asth, and one at the bottom)
            Degenerate vertices (e.g. at nodes where sediment is yet to be deposited or has been eroded) are avoided by a small shift, kept in self.sed_diff_z
            
-           When the option useFakeEncodedZ is set, the z-values are repurposed to encode the index of the vertex in the original, deterministic indexing.
-           This is necessary because dolfinx will re-index the vertices upon mesh generation. 
         """           
         tti = time_index
         self.tti = time_index
@@ -487,11 +485,7 @@ class UniformNodeGridFixedSizeMeshModel:
         self.sed_diff_z = np.array(self.sed_diff_z)
         self.mesh_vertices = self.mesh_vertices_0.copy()
         self.mesh_vertices[:,2] = self.mesh_vertices_0[:,2] + self.sed_diff_z
-        if (useFakeEncodedZ):
-            self.mesh_vertices[:,2] = np.ceil(self.mesh_vertices[:,2])*1000 + np.array(list(range(self.mesh_vertices.shape[0])))*0.01
-            # zz = self.mesh_vertices[:,2].copy()
-            # zz2=np.mod(zz,1000)
-            # # mesh_reindex = (1e-4+zz2*10).astype(np.int32)
+
 
     def updateVertices(self):
         """Update the mesh vertex positions using the values in self.mesh_vertices, and using the known dolfinx-induded reindexing
@@ -509,9 +503,8 @@ class UniformNodeGridFixedSizeMeshModel:
         """Construct a new mesh at the given time index tti, and determine the vertex re-indexing induced by dolfinx
         """        
         self.tti = tti
-        self.buildVertices(time_index=tti, useFakeEncodedZ=True)
+        self.buildVertices(time_index=tti)
         self.constructMesh()
-        self.buildVertices(time_index=tti, useFakeEncodedZ=False)
         self.updateVertices()        
 
     def updateMesh(self,tti):
@@ -519,7 +512,7 @@ class UniformNodeGridFixedSizeMeshModel:
         """   
         assert self.mesh is not None
         self.tti = tti
-        self.buildVertices(time_index=tti, useFakeEncodedZ=False)
+        self.buildVertices(time_index=tti)
         self.updateVertices()        
 
     def buildHexahedra(self):
@@ -672,10 +665,8 @@ class UniformNodeGridFixedSizeMeshModel:
         # breakpoint()
 
         #
-        # obtain original vertex order as encoded in z-pos digits
-        zz  = self.mesh.geometry.x[:,2].copy()
-        zz2 = np.mod(zz,1000)
-        self.mesh_reindex = (1e-4+zz2*100).astype(np.int32)
+        # obtain original vertex order
+        self.mesh_reindex = np.array(self.mesh.geometry.input_global_indices).astype(np.int32)        
         self.mesh0_geometry_x = self.mesh.geometry.x.copy()
 
         # for i,c in enumerate(self.node_index):

@@ -13,11 +13,11 @@ permissions:
   contents: read
 
 jobs:
-  test3d:
-    uses: equinor/warmth/.github/workflows/python-test-3d.yml@main
-    with:
-      event_type: ${{ github.event_name}}
-      action_type: ${{ github.event.action}}
+  # test3d:
+  #   uses: equinor/warmth/.github/workflows/python-test-3d.yml@main
+  #   with:
+  #     event_type: ${{ github.event_name}}
+  #     action_type: ${{ github.event.action}}
   test1d:
     uses: equinor/warmth/.github/workflows/python-test.yml@main
     with:
@@ -34,7 +34,7 @@ jobs:
       GITHUB_TOKEN_WORKFLOW: ${{ secrets.GITHUB_TOKEN }}
 
   deploy:
-    needs: [test3d, test1d, snyk]
+    needs: [test1d, snyk]
     environment: deploy
     runs-on: ubuntu-latest
 

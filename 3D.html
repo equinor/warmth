@@ -49,6 +49,7 @@
 <li class="toctree-l1"><a class="reference internal" href="theory.html">Background theory</a></li>
 <li class="toctree-l1"><a class="reference internal" href="example.html">Example</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#run-example">Run Example</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#workflow">Workflow</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#d-heat-equation-simulation-using-dolfinx">3D heat equation simulation using dolfinx</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#resqml-output">RESQML output</a></li>
@@ -90,6 +91,12 @@ pip<span class="w"> </span>install<span class="w"> </span>warmth
 </pre></div>
 </div>
 <p>3D part of the library has only been tested with Python 3.10.x and Dolfinx v0.7.x</p>
+</section>
+<section id="run-example">
+<h1>Run Example<a class="headerlink" href="#run-example" title="Link to this heading"></a></h1>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mpiexec<span class="w"> </span>-n<span class="w"> </span><span class="m">4</span><span class="w"> </span>python3<span class="w"> </span>tests/warmth3d/test_3d.py
+</pre></div>
+</div>
 </section>
 <section id="workflow">
 <h1>Workflow<a class="headerlink" href="#workflow" title="Link to this heading"></a></h1>

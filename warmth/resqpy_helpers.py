@@ -8,7 +8,7 @@ import resqpy.model as rq
 import resqpy.olio.uuid as bu
 import resqpy.unstructured as rug
 import resqpy.time_series as rts
-
+from warmth.logging import logger
 #
 # 
 #
@@ -261,7 +261,8 @@ def read_mesh_resqml_hexa(epcfilename, meshTitle = 'hexamesh'):
     # read properties
     #
 
-    temp_uuid = model.uuid(title = 'Temperature')
+    temp_uuid = model.uuids(title = 'Temperature')
+    temp_uuid = temp_uuid[0]
     assert temp_uuid is not None
     temp_prop = rqp.Property(model, uuid = temp_uuid)
     assert temp_prop.uom() == 'degC'
@@ -276,11 +277,12 @@ def read_mesh_resqml_hexa(epcfilename, meshTitle = 'hexamesh'):
     assert layerID_prop.indexable_element() == 'cells'
     print( layerID_prop.array_ref().shape, layerID_prop.array_ref()[0:10] )  # .array_ref() exposes the values as numpy array
  
-    titles=['Temperature', 'Age', 'LayerID', 'Porosity_initial', 'Porosity_decay', 'Density_solid', 'insulance_thermal', 'Radiogenic_heat_production']
-    for title in titles:
-        prop_uuid = model.uuid(title = title)
+    titles=[ 'Age', 'LayerID', 'Porosity_initial', 'Porosity_decay', 'Density_solid', 'insulance_thermal', 'Radiogenic_heat_production']
+    titles_uuid = [model.uuid(title = title) for title in titles]
+    titles_uuid.append(temp_uuid)
+    for prop_uuid in titles_uuid:
         prop = rqp.Property(model, uuid = prop_uuid)
-        print(title, prop.indexable_element(), prop.uom(), prop.array_ref()[0:10] )
+        print(prop.title, prop.indexable_element(), prop.uom(), prop.array_ref()[0:10] )
     
 
 def write_hexa_grid_with_properties(filename, nodes, cells, modelTitle = "hexamesh",
@@ -459,7 +461,8 @@ def write_hexa_grid_with_properties(filename, nodes, cells, modelTitle = "hexame
 
 
 def write_hexa_grid_with_timeseries(filename, nodes_series, cells, modelTitle = "hexamesh",
-    Temp_per_vertex_series=None ):
+    Temp_per_vertex_series=None, age_per_vertex=None, poro0_per_cell=None, decay_per_cell=None, density_per_cell=None,
+    cond_per_cell=None, rhp_per_cell=None, lid_per_cell=None ):
     """Writes the given hexahedral mesh, defined by arrays of nodes and cell indices, into a RESQML .epc file
        Given SubsHeat properties are optionally written.
  
@@ -477,8 +480,8 @@ def write_hexa_grid_with_timeseries(filename, nodes_series, cells, modelTitle = 
        NOTE: writing properties that are defines per-node (have 'nodes' as indexable element) requires a patched version of resqpy!
     """
 
-    nodes = nodes_series[0]
-    node_count = len(nodes)
+    nodes_time_0 = nodes_series[-1,:,:] # present-day at last index
+    node_count = nodes_time_0.shape[0]
     faces_per_cell = []
     nodes_per_face = []
     faces_dict = {}
@@ -514,8 +517,10 @@ def write_hexa_grid_with_timeseries(filename, nodes_series, cells, modelTitle = 
     model = rq.new_model(filename)
     crs = rqc.Crs(model)
     crs.create_xml()
+    # present-day is set as 1 due resqpy
+    million_years_offset = 0 
+    times_in_years = [ int(max((t+million_years_offset)*1e6,1+million_years_offset)) for t in list(range(nodes_series.shape[0]-1,-1,-1))]
 
-    times_in_years = [ max(int(t*1e6),1) for t in list(range(len(nodes_series)-1,-1,-1))]
     gts = rts.GeologicTimeSeries.from_year_list(model, times_in_years, title="warmth simulation")
     gts.create_xml()
     rts.timeframe_for_time_series_uuid(model, gts.uuid)
@@ -543,7 +548,7 @@ def write_hexa_grid_with_timeseries(filename, nodes_series, cells, modelTitle = 
     hexa.cell_face_is_right_handed = cell_face_is_right_handed  # False for all faces for external cells
 
     # points
-    hexa.points_cached = nodes
+    hexa.points_cached = nodes_time_0
 
     # basic validity check
     hexa.check_hexahedral()
@@ -556,12 +561,13 @@ def write_hexa_grid_with_timeseries(filename, nodes_series, cells, modelTitle = 
     pc = hexa.property_collection
 
     # nodes0 = nodes.copy()
-    for time_index in range(len(nodes_series)-1,-1,-1):
-        # nodes2 = nodes0 + [0,0,time_index*10]
-        nodes2 = nodes_series[time_index].astype(np.float32)
+    for time_index in range(nodes_series.shape[0]-1,-1,-1):  #oldest first
+
+        nodes2 = nodes_series[time_index,:,:].astype(np.float32)
+
         pc.add_cached_array_to_imported_list(nodes2,
                                                 'dynamic nodes',
-                                                'points',
+                                                "points",
                                                 uom = 'm',
                                                 property_kind = 'length',
                                                 realization = 0,
@@ -572,7 +578,7 @@ def write_hexa_grid_with_timeseries(filename, nodes_series, cells, modelTitle = 
         tt = Temp_per_vertex_series[time_index].astype(np.float32)
         pc.add_cached_array_to_imported_list(tt,
                                                 'Temperature',
-                                                'Temperature',
+                                                "Temperature",
                                                 uom = 'degC',
                                                 property_kind = 'thermodynamic temperature',
                                                 realization = 0,
@@ -582,5 +588,75 @@ def write_hexa_grid_with_timeseries(filename, nodes_series, cells, modelTitle = 
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = gts.uuid)
 
+
+    if age_per_vertex is not None:
+        _ = rqp.Property.from_array(model,
+                                    age_per_vertex.astype(np.float32),
+                                    source_info = 'SubsHeat',
+                                    keyword = 'Age',
+                                    support_uuid = hexa.uuid,
+                                    property_kind = 'geological age',
+                                    indexable_element = 'nodes',
+                                    uom = 'y')
+
+    if lid_per_cell is not None:
+        _ = rqp.Property.from_array(model,
+                                    lid_per_cell.astype(np.int32),
+                                    source_info = 'SubsHeat',
+                                    keyword = 'LayerID',
+                                    support_uuid = hexa.uuid,
+                                    property_kind = 'layer ID',
+                                    indexable_element = 'cells',
+                                    uom = 'Euc',
+                                    discrete=True)
+         
+    if poro0_per_cell is not None:
+        _ = rqp.Property.from_array(model,
+                                    poro0_per_cell.astype(np.float32),
+                                    source_info = 'SubsHeat',
+                                    keyword = 'Porosity_initial',
+                                    support_uuid = hexa.uuid,
+                                    property_kind = 'porosity',
+                                    indexable_element = 'cells',
+                                    uom = 'm3/m3')
+    if decay_per_cell is not None:
+        _ = rqp.Property.from_array(model,
+                                    decay_per_cell.astype(np.float32),
+                                    source_info = 'SubsHeat',
+                                    keyword = 'Porosity_decay',
+                                    support_uuid = hexa.uuid,
+                                    property_kind = 'porosity decay',
+                                    indexable_element = 'cells',
+                                    uom = 'Euc')
+    if density_per_cell is not None:
+        _ = rqp.Property.from_array(model,
+                                    density_per_cell.astype(np.float32),
+                                    source_info = 'SubsHeat',
+                                    keyword = 'Density_solid',
+                                    support_uuid = hexa.uuid,
+                                    property_kind = 'density',
+                                    indexable_element = 'cells',
+                                    uom = 'kg/m3')
+    if cond_per_cell is not None:
+        #
+        # we write thermal conductivity as its inverse, the thermal insulance
+        #
+        _ = rqp.Property.from_array(model,
+                                    np.reciprocal(cond_per_cell).astype(np.float32),
+                                    source_info = 'SubsHeat',
+                                    keyword = 'insulance_thermal',
+                                    support_uuid = hexa.uuid,
+                                    property_kind = 'thermal insulance',
+                                    indexable_element = 'cells',
+                                    uom = 'deltaK.m2/W')
+    if rhp_per_cell is not None:
+        _ = rqp.Property.from_array(model,
+                                    rhp_per_cell.astype(np.float32),
+                                    source_info = 'SubsHeat',
+                                    keyword = 'Radiogenic_heat_production',
+                                    support_uuid = hexa.uuid,
+                                    property_kind = 'heat',
+                                    indexable_element = 'cells',
+                                    uom = 'W/m3')
     model.store_epc()
 

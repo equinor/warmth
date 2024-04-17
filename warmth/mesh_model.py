@@ -1554,7 +1554,30 @@ class UniformNodeGridFixedSizeMeshModel:
         return res.flatten()
 
 
+def global_except_hook(exctype, value, traceback):
+    """https://github.com/chainer/chainermn/issues/236
+    """
+    try:
+        sys.stderr.write("\n*****************************************************\n")
+        sys.stderr.write("Uncaught exception was detected on rank {}. \n".format(
+            MPI.COMM_WORLD.Get_rank()))
+        from traceback import print_exception
+        print_exception(exctype, value, traceback)
+        sys.stderr.write("*****************************************************\n\n\n")
+        sys.stderr.write("\n")
+        sys.stderr.write("Calling MPI_Abort() to shut down MPI processes...\n")
+        sys.stderr.flush()
+    finally:
+        try:       
+            MPI.COMM_WORLD.Abort(1)
+        except Exception as e:
+            sys.stderr.write("*****************************************************\n")
+            sys.stderr.write("Sorry, we failed to stop MPI, this process will hang.\n")
+            sys.stderr.write("*****************************************************\n")
+            sys.stderr.flush()
+            raise e
 
+sys.excepthook = global_except_hook
 
 def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0, pad_num_nodes=0,
             out_dir = "out-mapA/",sedimentsOnly=False, writeout=True, base_flux=None):

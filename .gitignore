@@ -38,7 +38,7 @@ others/
 __pycache__/
 *.egg-info/
 .eggs/
-
+case/
 .testmondata
 .pytest_cache
 .coverage

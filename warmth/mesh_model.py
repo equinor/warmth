@@ -5,6 +5,7 @@ import meshio
 import dolfinx  
 from petsc4py import PETSc
 import ufl
+import sys
 from scipy.interpolate import LinearNDInterpolator
 from progress.bar import Bar
 from warmth.build import single_node, Builder
@@ -254,7 +255,6 @@ class UniformNodeGridFixedSizeMeshModel:
             if (lid0>=-1) and (lid0<100):
                 hexa_to_keep.append(h)
                 lid_to_keep.append(lid0)
-                # cell_id_to_keep.append(self.node_index[i])
                 cell_id_to_keep.append(hex_data_nodeID[i])
                 minY = np.amin(np.array ( [x_original_order[hi,1] for hi in h] ))
                 if abs( self.node1D[hex_data_nodeID[i]].Y - minY)>1:
@@ -290,7 +290,8 @@ class UniformNodeGridFixedSizeMeshModel:
 
         from os import path
         filename_hex = path.join(out_path, self.modelName+'_hexa_'+str(tti)+'.epc')
-        write_hexa_grid_with_properties(filename_hex, np.array(points_cached), hexa_renumbered, "hexamesh",
+        points_cached=np.array(points_cached)
+        write_hexa_grid_with_properties(filename_hex, points_cached, hexa_renumbered, "hexamesh",
             np.array(T_per_vertex_keep), np.array(age_per_vertex_keep), poro0_per_cell, decay_per_cell, density_per_cell,
             cond_per_cell, rhp_per_cell, lid_per_cell)
         return filename_hex
@@ -305,11 +306,9 @@ class UniformNodeGridFixedSizeMeshModel:
            returns the filename (of the .epc file) that was written 
         """            
         hexaHedra, hex_data_layerID, hex_data_nodeID = self.buildHexahedra(keep_padding=False)
-
         hexa_to_keep = []
         p_to_keep = set()
         lid_to_keep = []
-        cond_per_cell = []
         cell_id_to_keep = []
         for i,h in enumerate(hexaHedra):
             lid0 = hex_data_layerID[i]
@@ -320,39 +319,45 @@ class UniformNodeGridFixedSizeMeshModel:
                 hexa_to_keep.append(h)
                 lid_to_keep.append(lid0)
                 cell_id_to_keep.append(hex_data_nodeID[i])
-                # k_cond_mean = []
                 for hi in h:
                     p_to_keep.add(hi)
-                #     k_cond_mean.append(self.thermalCond.x.array[hi])
-                # cond_per_cell.append( np.mean(np.array(k_cond_mean)))
 
-        # poro0_per_cell = np.array( [ self.getSedimentPropForLayerID('phi', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ] )
-        # decay_per_cell = np.array( [ self.getSedimentPropForLayerID('decay', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ])
-        # density_per_cell = np.array( [ self.getSedimentPropForLayerID('solidus', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ])
-        # cond_per_cell = np.array( [ self.getSedimentPropForLayerID('k_cond', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ])
-        # rhp_per_cell = np.array( [ self.getSedimentPropForLayerID('rhp', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ])
-        # lid_per_cell = np.array(lid_to_keep)
 
-        points_cached_series = []
-        Temp_per_vertex_series = []
+        poro0_per_cell = np.array( [ self.getSedimentPropForLayerID('phi', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ] )
+        decay_per_cell = np.array( [ self.getSedimentPropForLayerID('decay', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ])
+        density_per_cell = np.array( [ self.getSedimentPropForLayerID('solidus', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ])
+        cond_per_cell = np.array( [ self.getSedimentPropForLayerID('k_cond', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ])
+        rhp_per_cell = np.array( [ self.getSedimentPropForLayerID('rhp', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ])
+        lid_per_cell = np.array(lid_to_keep)
+        
+        x_original_order, T_per_vertex = self.get_node_pos_and_temp(self.time_indices[0]) # oldest first
+        n_vertices = x_original_order.shape[0]
+        age_per_vertex_keep = np.array([ self.age_per_vertex[i] for i in range(n_vertices) if i in p_to_keep ])
+        Temp_per_vertex_series = np.empty([len(self.time_indices), len(p_to_keep)])
+        points_cached_series = np.empty([len(self.time_indices), len(p_to_keep),3])
 
-        for tti in self.time_indices:
-            x_original_order, T_per_vertex = self.get_node_pos_and_temp(tti)
-            T_per_vertex_filt = [ T_per_vertex[i] for i in range(x_original_order.shape[0]) if i in p_to_keep  ]
-            Temp_per_vertex_series.append(np.array(T_per_vertex_filt))
-            points_cached = []
-            point_original_to_cached = np.ones(x_original_order.shape[0], dtype = np.int32)  * (-1)
-            for i in range(x_original_order.shape[0]):
+        for idx, tti in enumerate(self.time_indices): # oldest first
+            if idx > 0:
+                x_original_order, T_per_vertex = self.get_node_pos_and_temp(tti)
+            T_per_vertex_filt = [ T_per_vertex[i] for i in range(n_vertices) if i in p_to_keep  ]
+            Temp_per_vertex_series[idx,:] = T_per_vertex_filt
+            point_original_to_cached = np.full(n_vertices,-1,dtype = np.int32)
+            count = 0
+            for i in range(n_vertices):
                 if (i in p_to_keep):
-                    point_original_to_cached[i] = len(points_cached)
-                    points_cached.append(x_original_order[i,:])
-            points_cached_series.append(np.array(points_cached))
+                    points_cached_series[idx,count,:]=x_original_order[i,:]
+                    point_original_to_cached[i]= count
+                    count += 1
+            
+                    
         hexa_renumbered = [ [point_original_to_cached[i] for i in hexa] for hexa in hexa_to_keep ]
 
         from os import path
+
         filename_hex = path.join(out_path, self.modelName+'_hexa_ts_'+str(self.tti)+'.epc')
         write_hexa_grid_with_timeseries(filename_hex, points_cached_series, hexa_renumbered, "hexamesh",
-            Temp_per_vertex_series )
+            Temp_per_vertex_series,age_per_vertex_keep, poro0_per_cell, decay_per_cell, density_per_cell,
+            cond_per_cell, rhp_per_cell, lid_per_cell )
         return filename_hex
 
     def heatflow_at_crust_sed_boundary(self):
@@ -1549,6 +1554,31 @@ class UniformNodeGridFixedSizeMeshModel:
         return res.flatten()
 
 
+def global_except_hook(exctype, value, traceback):
+    """https://github.com/chainer/chainermn/issues/236
+    """
+    try:
+        sys.stderr.write("\n*****************************************************\n")
+        sys.stderr.write("Uncaught exception was detected on rank {}. \n".format(
+            MPI.COMM_WORLD.Get_rank()))
+        from traceback import print_exception
+        print_exception(exctype, value, traceback)
+        sys.stderr.write("*****************************************************\n\n\n")
+        sys.stderr.write("\n")
+        sys.stderr.write("Calling MPI_Abort() to shut down MPI processes...\n")
+        sys.stderr.flush()
+    finally:
+        try:       
+            MPI.COMM_WORLD.Abort(1)
+        except Exception as e:
+            sys.stderr.write("*****************************************************\n")
+            sys.stderr.write("Sorry, we failed to stop MPI, this process will hang.\n")
+            sys.stderr.write("*****************************************************\n")
+            sys.stderr.flush()
+            raise e
+
+sys.excepthook = global_except_hook
+
 def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0, pad_num_nodes=0,
             out_dir = "out-mapA/",sedimentsOnly=False, writeout=True, base_flux=None):
     logger.setLevel(10)  # numeric level equals DEBUG
@@ -1612,9 +1642,9 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
             comm.send(mm2.Tarr, dest=0, tag=((comm.rank-1)*10)+24)
         if comm.rank==0:
             mm2.receive_mpi_messages()
-            EPCfilename = mm2.write_hexa_mesh_resqml("temp/", end_time)
-            logger.info(f"RESQML model written to: {EPCfilename}")
+            # EPCfilename = mm2.write_hexa_mesh_resqml("temp/", end_time)
+            # logger.info(f"RESQML model written to: {EPCfilename}")
             EPCfilename_ts = mm2.write_hexa_mesh_timeseries("temp/")
             logger.info(f"RESQML partial model with timeseries written to: {EPCfilename_ts}")
-            read_mesh_resqml_hexa(EPCfilename)  # test reading of the .epc file
+            read_mesh_resqml_hexa(EPCfilename_ts)  # test reading of the .epc file
     return mm2

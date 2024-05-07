@@ -519,7 +519,7 @@ def write_hexa_grid_with_timeseries(filename, nodes_series, cells, modelTitle = 
     crs.create_xml()
     # present-day is set as 1 due resqpy
     million_years_offset = 0 
-    times_in_years = [ int(max((t+million_years_offset)*1e6,1+million_years_offset)) for t in list(range(nodes_series.shape[0]-1,-1,-1))]
+    times_in_years = [ int(max((t+million_years_offset)*1e6, million_years_offset)) for t in list(range(nodes_series.shape[0]-1,-1,-1))]
 
     gts = rts.GeologicTimeSeries.from_year_list(model, times_in_years, title="warmth simulation")
     gts.create_xml()

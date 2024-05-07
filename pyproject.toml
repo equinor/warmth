@@ -14,7 +14,7 @@ scipy = "^1.11.3"
 progress = "^1.6"
 urllib3 = "^2.0.6"
 meshio = {extras = ["all"], version = "^5.3.4"}
-resqpy = "^4.12.1"
+resqpy = "^4.14.4"
 pillow = "^10.3.0"
 
 [tool.poetry.group.dev.dependencies]

@@ -49,6 +49,8 @@ jobs:
 
       - name: Test with pytest
         run: |
+          #!/bin/bash set -e -o pipefail
+          poetry add mpi4py
           poetry run pytest --cov-report=term-missing --ignore=tests/warmth3d --cov=warmth tests/ | tee pytest-coverage.txt
 
       - name: Comment coverage

@@ -381,6 +381,7 @@ class Parameters:
         return
 
     def dump(self,filepath:Path):
+        filepath.parent.mkdir(exist_ok=True, parents=True)
         with open(filepath, "wb") as f:
             pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
         return

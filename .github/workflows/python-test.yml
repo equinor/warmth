@@ -37,6 +37,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          apt-get update && apt install mpich -y
           curl -sSL https://install.python-poetry.org | python3
           poetry install --with dev --no-interaction
 

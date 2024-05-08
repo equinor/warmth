@@ -28,10 +28,6 @@ jobs:
     secrets:
       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       GITHUB_TOKEN_WORKFLOW: ${{ secrets.GITHUB_TOKEN }}
-  docs:
-    uses: equinor/warmth/.github/workflows/docs.yml@main
-    secrets:
-      GITHUB_TOKEN_WORKFLOW: ${{ secrets.GITHUB_TOKEN }}
 
   deploy:
     needs: [test1d, snyk]

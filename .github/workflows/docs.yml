@@ -4,10 +4,13 @@
 name: docs
  
 on:
-  workflow_call:
-    secrets:
-      GITHUB_TOKEN_WORKFLOW:
-        required: true
+  push:
+    tags:
+    - '[0-9]+.[0-9]+.[0-9]'
+    
+permissions:
+  id-token: write
+  contents: write
     
 jobs:
   deploy:
@@ -32,6 +35,6 @@ jobs:
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v3
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN_WORKFLOW }}
+        github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./docs/_build/html
         destination_dir: ./

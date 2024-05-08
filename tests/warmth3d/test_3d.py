@@ -18,6 +18,7 @@ def test_3d_compare():
         st = time.time()
         maps_dir = Path("./docs/notebooks/data/")
         model = warmth.Model()
+        model.parameters.output_path = Path('./simout_3d')
 
         inputs = model.builder.input_horizons_template
     

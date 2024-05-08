@@ -35,10 +35,10 @@ jobs:
       #   with:
       #     python-version: ${{ matrix.python-version }}
 
-      # - name: Install dependencies
-      #   run: |
-      #     curl -sSL https://install.python-poetry.org | python3
-      #     poetry install --with dev --no-interaction
+      - name: Install dependencies
+        run: |
+          curl -sSL https://install.python-poetry.org | python3
+          poetry install --with dev --no-interaction
 
       - name: Lint with flake8
         run: |

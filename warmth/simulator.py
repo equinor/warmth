@@ -114,9 +114,9 @@ class Simulator:
     def dump_input_data(self, use_mpi=False):
         p = []
         parameter_data_path = self._parameters_path
-
-        from mpi4py import MPI
-        comm = MPI.COMM_WORLD        
+        if use_mpi:
+            from mpi4py import MPI
+            comm = MPI.COMM_WORLD        
         if (comm.rank==0):
             self._builder.parameters.dump(self._parameters_path)
             if isinstance(self._builder.grid,type(None)) is False:
@@ -193,14 +193,13 @@ class Simulator:
 
     def _parellel_run(self, save, purge, use_mpi=False):
         filtered = self._filter_full_sim()
-        from mpi4py import MPI
-        comm = MPI.COMM_WORLD        
-        if (comm.rank==0):
-            self.setup_directory(purge)
-        p = self.dump_input_data(use_mpi=use_mpi)
-
         if use_mpi:
             from mpi4py.futures import MPIPoolExecutor
+            from mpi4py import MPI
+            comm = MPI.COMM_WORLD        
+            if (comm.rank==0):
+                self.setup_directory(purge)
+            p = self.dump_input_data(use_mpi=use_mpi)
             with MPIPoolExecutor(max_workers=20) as executor:
                 results = [executor.submit(runWorker, i) for i in p]
                 with Bar('Processing...',check_tty=False, max=len(p)) as bar:
@@ -215,6 +214,7 @@ class Simulator:
                         except Exception as e:
                             logger.error(e)
         else:
+            p = self.dump_input_data(use_mpi=use_mpi)
             with concurrent.futures.ProcessPoolExecutor(mp_context=get_context('spawn')) as executor:
                 results = [executor.submit(runWorker, i) for i in p]
                 with Bar('Processing...',check_tty=False, max=len(p)) as bar:

@@ -37,7 +37,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-          apt-get update && apt install mpich -y
           curl -sSL https://install.python-poetry.org | python3
           poetry install --with dev --no-interaction
 
@@ -51,7 +50,6 @@ jobs:
       - name: Test with pytest
         run: |
           #!/bin/bash set -e -o pipefail
-          pip install mpi4py
           poetry run pytest --cov-report=term-missing --ignore=tests/warmth3d --cov=warmth tests/ | tee pytest-coverage.txt
 
       - name: Comment coverage

@@ -34,18 +34,13 @@ jobs:
       #   uses: actions/setup-python@v2
       #   with:
       #     python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: |
-          curl -sSL https://install.python-poetry.org | python3
-          poetry install --with dev --no-interaction
-
+      
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
-          poetry run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=docs
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=docs
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-          poetry run flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude=docs
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude=docs
 
       # - name: Test with pytest
       #   run: |
@@ -53,9 +48,12 @@ jobs:
       #     poetry run pytest --cov-report=term-missing --ignore=tests/warmth3d --cov=warmth tests/
       - name: Run
         uses: tj-actions/docker-run@v2
-
         with:
           image: ghcr.io/equinor/warmth:latest
           name: dolfinx
           options: -v ${{ github.workspace }}:/home/warmth
 
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}

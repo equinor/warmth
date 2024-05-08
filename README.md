@@ -3,6 +3,7 @@
 
 ![Build Status](https://github.com/equinor/warmth/actions/workflows/python-test.yml/badge.svg?branch=main)
 ![Build Status](https://github.com/equinor/warmth/actions/workflows/docs.yml/badge.svg?branch=main)
+[![codecov](https://codecov.io/gh/equinor/warmth/graph/badge.svg?token=A9LWISA7OI)](https://codecov.io/gh/equinor/warmth)
 
 [Documentation](https://equinor.github.io/warmth/)
 

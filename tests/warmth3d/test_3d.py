@@ -113,10 +113,3 @@ def test_3d_compare():
     # assert (max_abs_error<25.0), "Temperature difference between 3D and 1D simulations is >25"
     # assert (max_abs_error_shallow<5.0),  "Temperature difference between 3D and 1D simulations is >5 in the sediments."
 
-
-
-
-if __name__ == "__main__":
-    test_3d_compare()
-    if 'runtime_1D_sim' in globals():
-        print("Total time 1D simulations:", runtime_1D_sim)   

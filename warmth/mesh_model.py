@@ -1591,7 +1591,7 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
     tti = 0
     # base_flux = 0.0033
     writeout_final = True
-    time_solve = 0.0    
+    time_solve = 0.0
     with Bar('Processing...',check_tty=False, max=(start_time-end_time)) as bar:
         for tti in range(start_time, end_time-1,-1): #start from oldest
             rebuild_mesh = (tti==start_time)

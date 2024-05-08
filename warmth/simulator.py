@@ -216,6 +216,7 @@ class Simulator:
                         except Exception as e:
                             logger.error(e)
         else:
+            self.setup_directory(purge)
             p = self.dump_input_data(use_mpi=use_mpi)
             with concurrent.futures.ProcessPoolExecutor(mp_context=get_context('spawn')) as executor:
                 results = [executor.submit(runWorker, i) for i in p]
@@ -231,22 +232,22 @@ class Simulator:
                         except Exception as e:
                             logger.error(e)
         # pick up node with no results (failed)
-        if comm.rank==0:                            
-            for node_path in self._nodes_path.iterdir():
-                str_f = str(node_path)
-                if str_f.endswith(".pickle"):
-                    n=load_node(node_path)
-                    if save==False:
-                        node_path.unlink()
-                    self.put_node_to_grid(n)
-                    logger.warning(f"No result file for node X:{n.X}, Y:{n.Y}")
-            if save==False:
-                from shutil import rmtree
-                rmtree(self._builder.parameters.output_path)
-            if filtered >0:
-                logger.info(f"Interpolating results back to {filtered} partial simulated nodes")
-                interp_res= Results_interpolator(self._builder,len(p)-filtered)
-                interp_res.run()
+        #if comm.rank==0:                            
+        for node_path in self._nodes_path.iterdir():
+            str_f = str(node_path)
+            if str_f.endswith(".pickle"):
+                n=load_node(node_path)
+                if save==False:
+                    node_path.unlink()
+                self.put_node_to_grid(n)
+                logger.warning(f"No result file for node X:{n.X}, Y:{n.Y}")
+        if save==False:
+            from shutil import rmtree
+            rmtree(self._builder.parameters.output_path)
+        if filtered >0:
+            logger.info(f"Interpolating results back to {filtered} partial simulated nodes")
+            interp_res= Results_interpolator(self._builder,len(p)-filtered)
+            interp_res.run()
         return
     def put_node_to_grid(self,node:single_node):
         self._builder.nodes[node.indexer[0]][node.indexer[1]]=node

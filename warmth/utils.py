@@ -129,6 +129,7 @@ from .logging import logger
 #     return x1, steps_taken
 
 def compressed_pickle_save(data, path: Path):
+    path.parent.mkdir(exist_ok=True, parents=True)
     with open(path, "wb") as f:
         pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
 

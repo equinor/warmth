@@ -117,23 +117,25 @@ class Simulator:
         if use_mpi:
             from mpi4py import MPI
             comm = MPI.COMM_WORLD        
-        if (comm.rank==0):
-            self._builder.parameters.dump(self._parameters_path)
-            if isinstance(self._builder.grid,type(None)) is False:
-                self._builder.grid.dump(self._grid_path)                
-            if use_mpi:
+            if (comm.rank==0):
+                self._builder.parameters.dump(self._parameters_path)
+                if isinstance(self._builder.grid,type(None)) is False:
+                    self._builder.grid.dump(self._grid_path)                
                 from mpi4py.futures import MPIPoolExecutor
                 with MPIPoolExecutor(max_workers=10) as th:
                     futures = [th.submit(self.dump_input_nodes,  i)
                             for i in self._builder.iter_node() if i is not False]
                     for future in concurrent.futures.as_completed(futures):
                         p.append([parameter_data_path, future.result()])
-            else:
-                with concurrent.futures.ThreadPoolExecutor(max_workers=10) as th:
-                    futures = [th.submit(self.dump_input_nodes,  i)
-                            for i in self._builder.iter_node() if i is not False]
-                    for future in concurrent.futures.as_completed(futures):
-                        p.append([parameter_data_path, future.result()])
+        else:
+            self._builder.parameters.dump(self._parameters_path)
+            if isinstance(self._builder.grid,type(None)) is False:
+                self._builder.grid.dump(self._grid_path)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as th:
+                futures = [th.submit(self.dump_input_nodes,  i)
+                        for i in self._builder.iter_node() if i is not False]
+                for future in concurrent.futures.as_completed(futures):
+                    p.append([parameter_data_path, future.result()])
         return p
 
     def setup_directory(self, purge=False):

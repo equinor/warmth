@@ -47,7 +47,7 @@ for index in model.builder.grid.indexing_arr:
 
 
 
-model.simulator.run(save=False,purge=True)
+model.simulator.run(save=False,purge=True,use_mpi=False)
 
 for i in model.builder.iter_node():
     if i is not False:

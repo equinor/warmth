@@ -1,4 +1,5 @@
 from typing import Tuple
+from pathlib import Path
 import numpy as np
 from mpi4py import MPI
 import meshio
@@ -1642,9 +1643,10 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
             comm.send(mm2.Tarr, dest=0, tag=((comm.rank-1)*10)+24)
         if comm.rank==0:
             mm2.receive_mpi_messages()
+            Path(out_dir).mkdir(parents=True, exist_ok=True)
             # EPCfilename = mm2.write_hexa_mesh_resqml("temp/", end_time)
             # logger.info(f"RESQML model written to: {EPCfilename}")
-            EPCfilename_ts = mm2.write_hexa_mesh_timeseries("temp/")
+            EPCfilename_ts = mm2.write_hexa_mesh_timeseries(out_dir)
             logger.info(f"RESQML partial model with timeseries written to: {EPCfilename_ts}")
             read_mesh_resqml_hexa(EPCfilename_ts)  # test reading of the .epc file
     return mm2

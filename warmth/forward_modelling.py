@@ -125,6 +125,9 @@ class Forward_model:
         """
         beta_found = False
         beta_all = np.append(beta_all, beta_current)
+        if Wd_diff_all.size > 0:
+            if wd_diff >= Wd_diff_all[0]:
+                wd_diff +=1
         Wd_diff_all = np.append(Wd_diff_all, wd_diff)
         if wd_diff > 0:
             beta_found = True

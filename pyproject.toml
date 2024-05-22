@@ -16,7 +16,6 @@ urllib3 = "^2.0.6"
 meshio = {extras = ["all"], version = "^5.3.4"}
 resqpy = "^4.14.4"
 pillow = "^10.3.0"
-pyetp = "^0.0.7"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.25.2"

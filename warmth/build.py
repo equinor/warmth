@@ -691,7 +691,7 @@ class Builder:
                 for sed_grid in all_sediments_grid:
                     node_sed.append(sed_grid[index[0]][index[1]])
                 if all(node_sed) is False:
-                    logger.warning(f"dropping node {index}. One of the layer has no dpeth value")
+                    logger.warning(f"dropping node {index}. One of the layer has no depth value")
                 else:
                     top = np.empty(0)
                     topage = np.empty(0)

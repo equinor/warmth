@@ -2,7 +2,7 @@ from multiprocessing import  get_context
 import concurrent.futures
 from progress.bar import Bar
 from pathlib import Path
-
+import math
 import time
 import numpy as np
 from warmth.parameters import Parameters
@@ -167,7 +167,7 @@ class Simulator:
             raise Exception("Invalid input")
         short_axis_count = self._builder.grid.num_nodes_x if self._builder.grid.num_nodes_x <self._builder.grid.num_nodes_y else self._builder.grid.num_nodes_y
         if short_axis_count/self.simulate_every <minimum_node_per_axis:
-            self.simulate_every = short_axis_count/minimum_node_per_axis
+            self.simulate_every = math.floor(short_axis_count/minimum_node_per_axis)
             logger.warning(f"Simulating every {self.simulate_every} node to make sure each axis has minimum {minimum_node_per_axis} nodes")
         if self.simulate_every ==1:
             pass

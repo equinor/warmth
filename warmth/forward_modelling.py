@@ -54,7 +54,25 @@ class Forward_model:
         self._initial_height_of_sealevel()
         return
 
-    def _sediment_density(self, mean_porosity: np.ndarray[np.float64], density: np.ndarray[np.float64]) -> np.ndarray[np.float64]:
+    def sediment_density(self, mean_porosity: np.ndarray[np.float64], density: np.ndarray[np.float64]) -> np.ndarray[np.float64]:
+        """Effective density of sediment cells taking into account of water density in pores
+
+        Parameters
+        ----------
+        mean_porosity : np.ndarray[np.float64]
+            Porosity of the sediments
+        density : np.ndarray[np.float64]
+            Density of sediment
+
+        Returns
+        -------
+        mean_sediments_density : np.ndarray[np.float64]
+            Effective density of sediment cells
+        """
+        return self._sediment_density(mean_porosity, density,self._parameters.rhowater)
+    
+    @staticmethod
+    def _sediment_density(mean_porosity: np.ndarray[np.float64], density: np.ndarray[np.float64],rhowater) -> np.ndarray[np.float64]:
         """Effective density of sediment cells taking into account of water density in pores
 
         Parameters
@@ -70,11 +88,10 @@ class Forward_model:
             Effective density of sediment cells
         """
         mean_sediments_density = (
-            mean_porosity * self._parameters.rhowater +
+            mean_porosity * rhowater +
             (1 - mean_porosity) * density
         )
         return mean_sediments_density
-
 
     @staticmethod
     def _sediment_conductivity_sekiguchi(mean_porosity: np.ndarray[np.float64], conductivity: np.ndarray[np.float64],temperature_C:np.ndarray[np.float64]) -> np.ndarray[np.float64]:
@@ -98,7 +115,7 @@ class Forward_model:
         temperature_K=273.15+mid_pt_temperautureC
         conductivity = 1.84+358*((1.0227*conductivity)-1.882)*((1/temperature_K)-0.00068)
         effective_conductivity = conductivity*(1-mean_porosity)
-        return effective_conductivity
+        return effective_conductivity-0.5
 
     def _check_beta(self, wd_diff: float, beta_current: float, beta_all: np.ndarray[np.float64], Wd_diff_all: np.ndarray[np.float64]) -> tuple[bool, np.ndarray[np.float64], np.ndarray[np.float64]]:
         """Check if current beta factor matches the observed subsidence
@@ -1586,7 +1603,7 @@ class Forward_model:
         # if (self.current_node.X==12150) and (self.current_node.Y==12000):
         #     print("Lith", i, hLith, lithUpdated)
         
-        density_sed = self._sediment_density(
+        density_sed = self.sediment_density(
             mean_porosity_arr, self.current_node.sediments["solidus"].values[sed_idx_arr])
         conductivity_sed = self._sediment_conductivity_sekiguchi(
             mean_porosity_arr, self.current_node.sediments["k_cond"].values[sed_idx_arr],Tsed)

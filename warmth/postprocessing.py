@@ -21,7 +21,7 @@ class Results:
     class resultValues(TypedDict):
         depth: np.ndarray[np.float64]
         layerId: np.ndarray[np.int32]
-        value:np.ndarray[np.float64]
+        values:np.ndarray[np.float64]
 
     @property
     def ages(self)->np.ndarray[np.int32]:
@@ -206,6 +206,18 @@ class Results:
             v=v[top_idx:base_idx]
         return {"depth":d,"layerId":sed_id,"values":v}
 
+    def sediment_density(self, age:int,sediment_id:int|None=None)->resultValues:
+        from .forward_modelling import Forward_model
+        sed_poro = self.sediment_porosity(age, sediment_id)
+        start_idx = np.argwhere(sed_poro["layerId"]==0)[0][0]
+        end_idx = np.argwhere(sed_poro["layerId"]==-1)[0][0]
+        bulk_density = []
+        for layer_id in sed_poro["layerId"][start_idx:end_idx]:
+            bulk_density.append(self._sediment_input.iloc[layer_id]["solidus"])
+        sed_poro["values"][start_idx:end_idx]=Forward_model._sediment_density(sed_poro["values"][start_idx:end_idx],bulk_density,1000)
+        return sed_poro
+
+
     def _reference_conductivity(self,age:int)->np.ndarray:
         """Conductivity of layers at 20C reference temperature
 
@@ -298,12 +310,11 @@ class Results:
         float
             Basement heat flow (W/m3)
         """
-        sed_id = self.sediment_ids(age)
-        top_crust_idx= np.argwhere(sed_id==-1)[0][0]
-        hf=self.heatflow(age)["values"]
-        res = hf[top_crust_idx]
+        hf=self.heatflow(age)
+        top_crust_idx = np.argwhere(hf["layerId"] == -1)[0][0]
+        res = hf["values"][top_crust_idx]
         if top_crust_idx>0:
-            above = hf[top_crust_idx-1]
+            above = hf["values"][top_crust_idx-1]
             if np.isnan(above) is False: 
                 res = (res+above)/2
         return res

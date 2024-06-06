@@ -67,3 +67,4 @@ docs/_build
 *.c
 *.o
 *.so
+simout_3d/

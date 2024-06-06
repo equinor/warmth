@@ -498,12 +498,12 @@ class VR:
         return np.flip(RoV)
     
 class Results_interpolator:
-    def __init__(self, builder,n_valid_node:int) -> None:
+    def __init__(self, builder) -> None:
         self._builder = builder
         self._values = ["kAsth","crustRHP","qbase","T0"]
         self._values_arr = ["subsidence","crust_ls","lith_ls"]
         self._n_age=None
-        self.n_valid_node= n_valid_node+1
+        self._n_valid_node= None
         self._x = None
         self._y=None
         pass
@@ -515,17 +515,26 @@ class Results_interpolator:
 
     
     def _get_x_y(self)->None:
-        x = np.zeros(self.n_valid_node)
-        y = np.zeros(self.n_valid_node)
+        # x = np.zeros(self.n_valid_node)
+        # y = np.zeros(self.n_valid_node)
+        x = []
+        y = []
         for count, node in enumerate(self.iter_full_sim_nodes()):
-            x[count]=node.X
-            y[count]= node.Y
+            # x[count]=node.X
+            # y[count]= node.Y
+            x.append(node.X)
+            y.append(node.Y)
             if count == 0:
                 self._n_age = node.crust_ls.size
-        self._x = x
-        self._y=y
+        self._n_valid_node = len(x)
+        self._x = np.array(x)
+        self._y= np.array(y)
         return
-
+    @property
+    def n_valid_node(self)->np.ndarray[np.float64]:
+        if isinstance(self._n_valid_node,type(None)):
+            self._get_x_y()
+        return self._n_valid_node
     @property
     def x(self)->np.ndarray[np.float64]:
         if isinstance(self._x,type(None)):

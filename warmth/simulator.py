@@ -246,7 +246,7 @@ class Simulator:
             rmtree(self._builder.parameters.output_path)
         if filtered >0:
             logger.info(f"Interpolating results back to {filtered} partial simulated nodes")
-            interp_res= Results_interpolator(self._builder,len(p)-filtered)
+            interp_res= Results_interpolator(self._builder)
             interp_res.run()
         return
     def put_node_to_grid(self,node:single_node):

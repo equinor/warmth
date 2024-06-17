@@ -114,6 +114,23 @@ class single_node:
     def shf(self)->float:
         return ((self.crustRHP*self._upperCrust_ratio)*self.hc) + self.qbase
 
+    def clear_unused_data(self):
+        # print("depth out shape", self._depth_out.shape)
+        # print("depth out shape", self.temperature_out.shape)
+        # print("depth out shape", self._idsed.shape)
+        # self._depth_out = self._depth_out.astype(np.float32)
+        # self.max_time = self._depth_out.shape[1]
+        self.seabed_arr = np.array([np.where(~np.isnan(self.temperature_out[:,age]))[0][0] for age in range(self.max_time)])
+        # self.top_crust_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -1)[0][0], age] for age in range(self.max_time)]
+        # self.top_lith_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -2)[0][0], age] for age in range(self.max_time)]
+        # self.top_aest_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -3)[0][0], age] for age in range(self.max_time)]
+        # self._depth_out = None
+        # self.temperature_out =None
+        # self._idsed =None
+        # self._crust_ls =None
+        # self._lith_ls =None
+        # self._subsidence =None
+
     @property
     def result(self)-> Results|None:
         """Results of 1D simulation
@@ -123,11 +140,50 @@ class single_node:
         Results|None
             None if not simulated
         """
-        items = [self._depth_out,self.temperature_out,self._idsed]
-        if any(isinstance(i,type(None)) for i in items):
-            return None
-        else:
-            return Results(self._depth_out,self.temperature_out,self._idsed,self.sediments,self.kCrust,self.kLith,self.kAsth)
+        # print("result constructor ", dir(self))
+        # print(type(self.temperature_out))
+        # sba = []
+        # for age in range(self.max_time):
+        #     print("PING A", age)
+        #     ii = np.where(~np.isnan(self.temperature_out[:,age]))
+        #     print("PING B", age)
+        #     if len(ii)>0:
+        #         idx = ii[0][0]
+        #         sba.append(self._depth_out[idx,age])
+        #     else:
+        #         sba.append(0)
+        #     print("PING B", len(sba))
+        # # self.seabed_arr = np.array([np.where(~np.isnan(self.temperature_out[:,age]))[0][0] for age in range(self.max_time)])
+        # self.seabed_arr = np.array(sba)
+        # # self._depth_out = None
+        # # self.temperature_out =None
+        # print ("PING A")
+        # self.top_crust_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -1)[0][0], age] for age in range(self.max_time)]
+        # print ("PING B")
+        # self.top_lith_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -2)[0][0], age] for age in range(self.max_time)]
+        # print ("PING C")
+        # self.top_aest_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -3)[0][0], age] for age in range(self.max_time)]
+        # print ("PING D")
+        return Results(self.max_time,None, None, None, None, self._depth_out,self.temperature_out,self._idsed,self.sediments,self.kCrust,self.kLith,self.kAsth)
+        # return Results(self.max_time,self.seabed_arr, self.top_crust_arr, self.top_lith_arr, self.top_aest_arr, self._depth_out,self.temperature_out,self._idsed,self.sediments,self.kCrust,self.kLith,self.kAsth)
+        # items = [self._depth_out,self.temperature_out,self._idsed]
+        # if any(isinstance(i,type(None)) for i in items):
+        #     return None
+        # else:
+        #     return Results(self._depth_out,self.temperature_out,self._idsed,self.sediments,self.kCrust,self.kLith,self.kAsth)
+
+    def compute_derived_arrays(self):
+        #print ("PING A")
+        self.top_crust_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -1)[0][0], age] for age in range(self.max_time)]
+        #print ("PING B")
+        self.top_lith_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -2)[0][0], age] for age in range(self.max_time)]
+        #print ("PING C")
+        self.top_aest_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -3)[0][0], age] for age in range(self.max_time)]
+        #print ("PING D")
+        # self.seabed_arr = np.array([np.where(~np.isnan(self.temperature_out[:,age]))[0][0] for age in range(self.max_time)])
+
+
+
     @property
     def crust_ls(self)->np.ndarray[np.float64]:
         if isinstance(self.result,Results):

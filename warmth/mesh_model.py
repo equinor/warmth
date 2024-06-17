@@ -67,6 +67,8 @@ class UniformNodeGridFixedSizeMeshModel:
         self.num_nodes_x = self._builder.grid.num_nodes_x
         self.num_nodes_y = self._builder.grid.num_nodes_y
 
+        for node in self.node1D:
+            node.compute_derived_arrays()
         nodes_padded = []
         self.padX = padding_num_nodes
         for j in range(-self.padX,self.num_nodes_y+self.padX):
@@ -1646,7 +1648,7 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
             Path(out_dir).mkdir(parents=True, exist_ok=True)
             # EPCfilename = mm2.write_hexa_mesh_resqml("temp/", end_time)
             # logger.info(f"RESQML model written to: {EPCfilename}")
-            EPCfilename_ts = mm2.write_hexa_mesh_timeseries(out_dir)
-            logger.info(f"RESQML partial model with timeseries written to: {EPCfilename_ts}")
-            read_mesh_resqml_hexa(EPCfilename_ts)  # test reading of the .epc file
+            # EPCfilename_ts = mm2.write_hexa_mesh_timeseries(out_dir)
+            # logger.info(f"RESQML partial model with timeseries written to: {EPCfilename_ts}")
+            # read_mesh_resqml_hexa(EPCfilename_ts)  # test reading of the .epc file
     return mm2

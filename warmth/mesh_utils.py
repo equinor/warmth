@@ -138,13 +138,27 @@ def interpolateNode(interpolationNodes: List[single_node], interpolationWeights=
     node.X = np.sum( np.array( [node.X * w for node,w in zip(interpolationNodes,iWeightNorm)] ) ) 
     node.Y = np.sum( np.array( [node.Y * w for node,w in zip(interpolationNodes,iWeightNorm)] ) )
 
-    times = range(node.result._depth.shape[1])
+
+    # self.top_crust_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -1)[0][0], age] for age in range(self.max_time)]
+    # #print ("PING B")
+    # self.top_lith_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -2)[0][0], age] for age in range(self.max_time)]
+    # #print ("PING C")
+    # self.top_aest_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -3)[0][0], age] for age in range(self.max_time)]
+    # #print ("PING D")
+
+    # self.top_lithosphere(age)-self.top_crust(age)
+
+    # times = range(node.result._depth.shape[1])
+    times = range(node.max_time)
     if node.subsidence is None:
-        node.subsidence = np.sum( np.array( [ [node.result.seabed(t) for t in times] * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
+        # node.subsidence = np.sum( np.array( [ [node.result.seabed(t) for t in times] * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
+        node.subsidence = np.sum( np.array( [ [node.seabed_arr[t] for t in times] * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
     if node.crust_ls is None:
-        node.crust_ls = np.sum( np.array( [ [node.result.crust_thickness(t) for t in times] * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
+        # node.crust_ls = np.sum( np.array( [ [node.result.crust_thickness(t) for t in times] * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
+        node.crust_ls = np.sum( np.array( [ [(node.top_lith_arr[t]-node.top_crust_arr[t]) for t in times] * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
     if node.lith_ls is None:
-        node.lith_ls = np.sum( np.array( [ [node.result.lithosphere_thickness(t) for t in times] * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
+        # node.lith_ls = np.sum( np.array( [ [node.result.lithosphere_thickness(t) for t in times] * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
+        node.crust_ls = np.sum( np.array( [ [(node.top_aest_arr[t]-node.top_lithosphere[t]) for t in times] * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
 
     if node.beta is None:
         node.beta = np.sum( np.array( [node.beta * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
@@ -152,10 +166,10 @@ def interpolateNode(interpolationNodes: List[single_node], interpolationWeights=
         node.kAsth = np.sum( np.array( [node.kAsth * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
     if node.kLith is None:
         node.kLith = np.sum( np.array( [node.kLith * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
-    if node._depth_out is None:
-        node._depth_out = np.sum([node.result._depth_out*w for n,w in zip(interpolationNodes[0:1], [1] )], axis=0)
-    if node.temperature_out is None:
-        node.temperature_out = np.sum([n.result.temperature_out*w for n,w in zip(interpolationNodes[0:1], [1] )], axis=0)
+    # if node._depth_out is None:
+    #     node._depth_out = np.sum([node.result._depth_out*w for n,w in zip(interpolationNodes[0:1], [1] )], axis=0)
+    # if node.temperature_out is None:
+    #     node.temperature_out = np.sum([n.result.temperature_out*w for n,w in zip(interpolationNodes[0:1], [1] )], axis=0)
 
     if node.sed is None:
         node.sed = np.sum([n.sed*w for n,w in zip(interpolationNodes,iWeightNorm)], axis=0)

@@ -53,6 +53,8 @@ class _nodeWorker:
             self.node = fw.current_node
             self._pad_sediments()
             self.node.simulated_at = time.time()
+            self.node.max_time = self.node._depth_out.shape[1]
+            self.node.compute_derived_arrays()
             filepath = self._save_results()
             # Delete input node
             self.node_path.unlink(missing_ok=True)

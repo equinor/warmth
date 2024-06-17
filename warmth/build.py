@@ -119,17 +119,20 @@ class single_node:
         # print("depth out shape", self.temperature_out.shape)
         # print("depth out shape", self._idsed.shape)
         # self._depth_out = self._depth_out.astype(np.float32)
-        # self.max_time = self._depth_out.shape[1]
-        self.seabed_arr = np.array([np.where(~np.isnan(self.temperature_out[:,age]))[0][0] for age in range(self.max_time)])
+        self.max_time = self._depth_out.shape[1]
+        # self.seabed_arr = np.array( [ self._depth_out[np.where(~np.isnan(self.temperature_out[:,age]))[0][0],age] for age in range(self.max_time)])
+        # breakpoint()
         # self.top_crust_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -1)[0][0], age] for age in range(self.max_time)]
         # self.top_lith_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -2)[0][0], age] for age in range(self.max_time)]
         # self.top_aest_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -3)[0][0], age] for age in range(self.max_time)]
-        # self._depth_out = None
-        # self.temperature_out =None
-        # self._idsed =None
-        # self._crust_ls =None
-        # self._lith_ls =None
-        # self._subsidence =None
+        self._depth_out = None
+        self.temperature_out =None
+        self._idsed =None
+        self.coord_initial = None
+        # print("node elements:", dir(self))
+        self._crust_ls =None
+        self._lith_ls =None
+        self._subsidence =None
 
     @property
     def result(self)-> Results|None:
@@ -180,8 +183,7 @@ class single_node:
         #print ("PING C")
         self.top_aest_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -3)[0][0], age] for age in range(self.max_time)]
         #print ("PING D")
-        # self.seabed_arr = np.array([np.where(~np.isnan(self.temperature_out[:,age]))[0][0] for age in range(self.max_time)])
-
+        self.seabed_arr = np.array( [ self._depth_out[np.where(~np.isnan(self.temperature_out[:,age]))[0][0],age] for age in range(self.max_time)])
 
 
     @property
@@ -190,7 +192,7 @@ class single_node:
             all_age = self.result.ages
             val = np.zeros(all_age.size)
             for age in all_age:
-                val[age] = self.result.crust_thickness(age)
+                val[age] = self.top_lith_arr[age] - self.top_crust_arr[age]
     
             return val
         else:
@@ -201,7 +203,7 @@ class single_node:
             all_age = self.result.ages
             val = np.zeros(all_age.size)
             for age in all_age:
-                val[age] = self.result.lithosphere_thickness(age)
+                val[age] = self.top_aest_arr[age] - self.top_lith_arr[age]
             return val
         else:
             return self._lith_ls          
@@ -211,7 +213,8 @@ class single_node:
             all_age = self.result.ages
             val = np.zeros(all_age.size)
             for age in all_age:
-                val[age] = self.result.seabed(age)
+                val[age] = self.seabed_arr[age]
+                # val[age] = self.result.seabed(age)
             return val
         else:
             return self._subsidence 
@@ -221,8 +224,10 @@ class single_node:
             all_age = self.result.ages
             val = np.zeros(all_age.size)
             for age in all_age:
-                seabed = self.result.seabed(age)
-                top_crust = self.result.top_crust(age)
+                # seabed = self.result.seabed(age)
+                # top_crust = self.result.top_crust(age)
+                seabed = self.seabed_arr[age]
+                top_crust = self.top_crust_arr[age]
                 val[age] = top_crust - seabed
             return val
         else:

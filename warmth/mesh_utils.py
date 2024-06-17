@@ -137,7 +137,7 @@ def interpolateNode(interpolationNodes: List[single_node], interpolationWeights=
     node.__dict__.update(interpolationNodes[0].__dict__)
     node.X = np.sum( np.array( [node.X * w for node,w in zip(interpolationNodes,iWeightNorm)] ) ) 
     node.Y = np.sum( np.array( [node.Y * w for node,w in zip(interpolationNodes,iWeightNorm)] ) )
-
+    node.max_time = interpolationNodes[0].max_time
 
     # self.top_crust_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -1)[0][0], age] for age in range(self.max_time)]
     # #print ("PING B")

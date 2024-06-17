@@ -55,6 +55,7 @@ class _nodeWorker:
             self.node.simulated_at = time.time()
             self.node.max_time = self.node._depth_out.shape[1]
             self.node.compute_derived_arrays()
+            self.node.node_path = self.node_path
             filepath = self._save_results()
             # Delete input node
             self.node_path.unlink(missing_ok=True)
@@ -252,6 +253,7 @@ class Simulator:
             interp_res.run()
         return
     def put_node_to_grid(self,node:single_node):
+        node.clear_unused_data()
         self._builder.nodes[node.indexer[0]][node.indexer[1]]=node
         return
 

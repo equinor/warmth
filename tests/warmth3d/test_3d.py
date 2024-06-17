@@ -11,7 +11,7 @@ import time
 @pytest.mark.mpi
 def test_3d_compare():
     comm = MPI.COMM_WORLD
-    inc = 2100
+    inc = 1000
     model_pickled = f"model-out-inc_{inc}.p"
     if comm.rank == 0 and not os.path.isfile(model_pickled):
         global runtime_1D_sim
@@ -84,7 +84,9 @@ def test_3d_compare():
         hx = nnx // 2
         hy = nny // 2
 
-        nn = model.builder.nodes[hy-mm2.padX][hx-mm2.padX]
+        nn0 = model.builder.nodes[hy-mm2.padX][hx-mm2.padX]
+        nn =pickle.load(open(str(nn0.node_path).replace(".pickle", "_results"),"rb"))
+        breakpoint()
         dd = nn._depth_out[:,0]
 
         mm2_pos, mm2_temp = mm2.get_node_pos_and_temp(-1)

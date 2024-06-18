@@ -9,9 +9,8 @@ from .logging import logger
 class Results:
     """Simulation results
     """
-    def __init__(self,max_time: int,
-                 seabed_arr:np.ndarray, top_crust_arr:np.ndarray, top_lith_arr:np.ndarray, top_aest_arr:np.ndarray,
-                 depth:np.ndarray, temperature:np.ndarray,sediments_ids:np.ndarray,sediment_input:pd.DataFrame,k_crust:float,k_lith:float,k_asth:float):
+    def __init__(self, depth:np.ndarray, temperature:np.ndarray,
+                 sediments_ids:np.ndarray,sediment_input:pd.DataFrame,k_crust:float,k_lith:float,k_asth:float):
         self._depth=depth
         self._temperature=temperature
         self._sediments_ids=sediments_ids
@@ -19,12 +18,6 @@ class Results:
         self._k_crust=k_crust
         self._k_lith=k_lith
         self._k_asth=k_asth
-        self._max_time=max_time
-        # self.seabed_arr = seabed_arr
-        # self.top_crust_arr = top_crust_arr
-        # self.top_lith_arr = top_lith_arr
-        # self.top_aest_arr = top_aest_arr
-
 
     class resultValues(TypedDict):
         depth: np.ndarray[np.float64]
@@ -55,7 +48,6 @@ class Results:
         float
             Depth of crust from sea level (m)
         """
-        # return self.top_crust_arr[age]
         depth_idx= np.where(self.sediment_ids(age) == -1)[0][0]
         return self._depth[depth_idx,age]
 
@@ -71,8 +63,7 @@ class Results:
         -------
         float
             Depth of lithospheric mantle / Moho from sea level (m)
-        """
-        # return self.top_crust_arr[age]        
+        """    
         depth_idx= np.where(self.sediment_ids(age) == -2)[0][0]
         return self._depth[depth_idx,age]
 
@@ -88,8 +79,7 @@ class Results:
         -------
         float
             Depth of Asthenosphere from sea level (m)
-        """
-        # return self.top_aest_arr[age]          
+        """         
         depth_idx= np.where(self.sediment_ids(age) == -3)[0][0]
         return self._depth[depth_idx,age]
 

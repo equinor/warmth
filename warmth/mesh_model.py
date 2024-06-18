@@ -67,8 +67,6 @@ class UniformNodeGridFixedSizeMeshModel:
         self.num_nodes_x = self._builder.grid.num_nodes_x
         self.num_nodes_y = self._builder.grid.num_nodes_y
 
-        # for node in self.node1D:
-        #     node.compute_derived_arrays()
         nodes_padded = []
         self.padX = padding_num_nodes
         for j in range(-self.padX,self.num_nodes_y+self.padX):

@@ -115,7 +115,7 @@ class Forward_model:
         temperature_K=273.15+mid_pt_temperautureC
         conductivity = 1.84+358*((1.0227*conductivity)-1.882)*((1/temperature_K)-0.00068)
         effective_conductivity = conductivity*(1-mean_porosity)
-        return effective_conductivity-0.5
+        return effective_conductivity
 
     def _check_beta(self, wd_diff: float, beta_current: float, beta_all: np.ndarray[np.float64], Wd_diff_all: np.ndarray[np.float64]) -> tuple[bool, np.ndarray[np.float64], np.ndarray[np.float64]]:
         """Check if current beta factor matches the observed subsidence

@@ -18,8 +18,6 @@ resqpy = "^4.14.4"
 pillow = "^10.3.0"
 
 [tool.poetry.group.dev.dependencies]
-ipykernel = "^6.25.2"
-notebook = "^7.0.4"
 pytest = "^7.4.2"
 pytest-cov = "^4.1.0"
 flake8 = "^6.1.0"
@@ -32,6 +30,7 @@ ipywidgets = "^8.1.1"
 widgetsnbextension = "^4.0.9"
 nbsphinx = "^0.9.3"
 pytest-mpi = "^0.6"
+notebook = "^7.2.1"
 
 
 [build-system]

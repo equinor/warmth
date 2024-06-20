@@ -573,7 +573,7 @@ class Results_interpolator:
             for n in self._builder.iter_node():
                 if n._full_simulation is False:
                     idx = n.indexer
-                    val =interped[idx[0],idx[1]]
+                    val =interped[idx[1],idx[0]]
                     setattr(n,prop,val)
         return
     
@@ -595,7 +595,7 @@ class Results_interpolator:
                         if isinstance(getattr(node,prop),type(None)):
                             setattr(node,prop,np.zeros(self.n_age))
                         idx = node.indexer
-                        interpolated_val =interp_all_this_age[idx[0],idx[1]]
+                        interpolated_val =interp_all_this_age[idx[1],idx[0]]
                         arr = getattr(node,prop)
                         arr[age] =interpolated_val
                         setattr(node,prop,arr)

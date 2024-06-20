@@ -11,7 +11,7 @@ import time
 @pytest.mark.mpi
 def test_3d_compare():
     comm = MPI.COMM_WORLD
-    inc = 2100
+    inc = 1000
     model_pickled = f"model-out-inc_{inc}.p"
     if comm.rank == 0 and not os.path.isfile(model_pickled):
         global runtime_1D_sim
@@ -46,7 +46,7 @@ def test_3d_compare():
             i.adiab = 0.3e-3
 
 
-        model.simulator.simulate_every = 1
+        model.simulator.simulate_every = 2
 
         #
         # set 1D simulation parameters to be most similar to those in the (later) 3D simulation, for better comparison

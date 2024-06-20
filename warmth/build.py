@@ -153,7 +153,7 @@ class single_node:
     @property
     def crust_ls(self)->np.ndarray[np.float64]:
         if isinstance(self.result,Results):
-            all_age = np.arange(self.max_time,dtype=np.int32)
+            all_age = np.arange(len(self.top_lith_arr),dtype=np.int32)
             val = np.zeros(all_age.size)
             for age in all_age:
                 val[age] = self.top_lith_arr[age] - self.top_crust_arr[age]
@@ -164,7 +164,7 @@ class single_node:
     @property
     def lith_ls(self)->np.ndarray[np.float64]:
         if isinstance(self.result,Results):
-            all_age = np.arange(self.max_time,dtype=np.int32)
+            all_age = np.arange(len(self.top_lith_arr),dtype=np.int32)
             val = np.zeros(all_age.size)
             for age in all_age:
                 val[age] = self.top_aest_arr[age] - self.top_lith_arr[age]
@@ -174,7 +174,7 @@ class single_node:
     @property
     def subsidence(self)->np.ndarray[np.float64]:
         if isinstance(self.result,Results):
-            all_age = np.arange(self.max_time,dtype=np.int32)
+            all_age = np.arange(len(self.top_lith_arr),dtype=np.int32)
             val = np.zeros(all_age.size)
             for age in all_age:
                 val[age] = self.seabed_arr[age]
@@ -185,7 +185,7 @@ class single_node:
     @property
     def sed_thickness_ls(self)->float:
         if isinstance(self.result,Results):
-            all_age = np.arange(self.max_time,dtype=np.int32)
+            all_age = np.arange(len(self.top_lith_arr),dtype=np.int32)
             val = np.zeros(all_age.size)
             for age in all_age:
                 # seabed = self.result.seabed(age)

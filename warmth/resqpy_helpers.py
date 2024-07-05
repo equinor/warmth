@@ -150,7 +150,7 @@ def write_tetra_grid_with_properties(filename, nodes, cells, modelTitle = "tetra
     
     # https://github.com/bp/resqpy/blob/master/tests/unit_tests/property/test_property.py
     #
-    # 'Temperature'  'Age'    'LayerID' 'Porosity_initial'  'Porosity_decay' 'Density_solid'  'insulance_thermal''Radiogenic_heat_production'
+    # 'Temperature'  'Age'    'LayerID' 'Porosity_initial'  'Porosity_decay' 'Density_solid'  'thermal_conductivity''Radiogenic_heat_production'
 
     if Temp_per_vertex is not None:
         _ = rqp.Property.from_array(model,
@@ -212,13 +212,13 @@ def write_tetra_grid_with_properties(filename, nodes, cells, modelTitle = "tetra
                                     uom = 'kg/m3')
     if cond_per_cell is not None:
         _ = rqp.Property.from_array(model,
-                                    np.reciprocal(cond_per_cell),
+                                    cond_per_cell,
                                     source_info = 'SubsHeat',
-                                    keyword = 'insulance_thermal',
+                                    keyword = 'thermal_conductivity',
                                     support_uuid = tetra.uuid,
-                                    property_kind = 'thermal insulance',
+                                    property_kind = 'thermal conductivity',
                                     indexable_element = 'cells',
-                                    uom = 'deltaK.m2/W')
+                                    uom = 'W/(m.deltaK)')
     if rhp_per_cell is not None:
         _ = rqp.Property.from_array(model,
                                     rhp_per_cell,
@@ -277,7 +277,7 @@ def read_mesh_resqml_hexa(epcfilename, meshTitle = 'hexamesh'):
     assert layerID_prop.indexable_element() == 'cells'
     print( layerID_prop.array_ref().shape, layerID_prop.array_ref()[0:10] )  # .array_ref() exposes the values as numpy array
  
-    titles=[ 'Age', 'LayerID', 'Porosity_initial', 'Porosity_decay', 'Density_solid', 'insulance_thermal', 'Radiogenic_heat_production']
+    titles=[ 'Age', 'LayerID', 'Porosity_initial', 'Porosity_decay', 'Density_solid', 'thermal_conductivity', 'Radiogenic_heat_production']
     titles_uuid = [model.uuid(title = title) for title in titles]
     titles_uuid.append(temp_uuid)
     for prop_uuid in titles_uuid:
@@ -436,17 +436,15 @@ def write_hexa_grid_with_properties(filename, nodes, cells, modelTitle = "hexame
                                     indexable_element = 'cells',
                                     uom = 'kg/m3')
     if cond_per_cell is not None:
-        #
-        # we write thermal conductivity as its inverse, the thermal insulance
-        #
+
         _ = rqp.Property.from_array(model,
-                                    np.reciprocal(cond_per_cell).astype(np.float32),
+                                    cond_per_cell.astype(np.float32),
                                     source_info = 'SubsHeat',
-                                    keyword = 'insulance_thermal',
+                                    keyword = 'thermal_conductivity',
                                     support_uuid = hexa.uuid,
-                                    property_kind = 'thermal insulance',
+                                    property_kind = 'thermal conductivity',
                                     indexable_element = 'cells',
-                                    uom = 'deltaK.m2/W')
+                                    uom = 'W/(m.deltaK)')
     if rhp_per_cell is not None:
         _ = rqp.Property.from_array(model,
                                     rhp_per_cell.astype(np.float32),

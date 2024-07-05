@@ -53,7 +53,7 @@ def read_mesh_resqml(epcfilename, meshTitle = 'tetramesh'):
     assert layerID_prop.indexable_element() == 'cells'
     # print( layerID_prop.array_ref().shape, layerID_prop.array_ref()[0:10] )  # .array_ref() exposes the values as numpy array
  
-    titles=['Temperature', 'Age', 'LayerID', 'Porosity_initial', 'Porosity_decay', 'Density_solid', 'insulance_thermal', 'Radiogenic_heat_production']
+    titles=['Temperature', 'Age', 'LayerID', 'Porosity_initial', 'Porosity_decay', 'Density_solid', 'thermal_conductivity', 'Radiogenic_heat_production']
     for title in titles:
         prop_uuid = model.uuid(title = title)
         prop = rqp.Property(model, uuid = prop_uuid)

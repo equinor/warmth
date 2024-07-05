@@ -638,17 +638,14 @@ def write_hexa_grid_with_timeseries(filename, nodes_series, cells, modelTitle = 
                                     indexable_element = 'cells',
                                     uom = 'kg/m3')
     if cond_per_cell is not None:
-        #
-        # we write thermal conductivity as its inverse, the thermal insulance
-        #
         _ = rqp.Property.from_array(model,
-                                    np.reciprocal(cond_per_cell).astype(np.float32),
+                                    cond_per_cell.astype(np.float32),
                                     source_info = 'SubsHeat',
-                                    keyword = 'insulance_thermal',
+                                    keyword = 'thermal_conductivity',
                                     support_uuid = hexa.uuid,
-                                    property_kind = 'thermal insulance',
+                                    property_kind = 'thermal conductivity',
                                     indexable_element = 'cells',
-                                    uom = 'deltaK.m2/W')
+                                    uom = 'W/(m.deltaK)')
     if rhp_per_cell is not None:
         _ = rqp.Property.from_array(model,
                                     rhp_per_cell.astype(np.float32),

@@ -9,7 +9,8 @@ from .logging import logger
 class Results:
     """Simulation results
     """
-    def __init__(self,depth:np.ndarray, temperature:np.ndarray,sediments_ids:np.ndarray,sediment_input:pd.DataFrame,k_crust:float,k_lith:float,k_asth:float):
+    def __init__(self, depth:np.ndarray, temperature:np.ndarray,
+                 sediments_ids:np.ndarray,sediment_input:pd.DataFrame,k_crust:float,k_lith:float,k_asth:float):
         self._depth=depth
         self._temperature=temperature
         self._sediments_ids=sediments_ids
@@ -22,7 +23,7 @@ class Results:
         depth: np.ndarray[np.float64]
         layerId: np.ndarray[np.int32]
         values:np.ndarray[np.float64]
-
+    
     @property
     def ages(self)->np.ndarray[np.int32]:
         """Array of all simulated ages
@@ -32,7 +33,7 @@ class Results:
         np.ndarray
             Array of ages
         """
-        return np.arange(self._depth.shape[1],dtype=np.int32)
+        return np.arange(self._max_time,dtype=np.int32)
 
     def top_crust(self,age:int)->float:
         """Depth of crust
@@ -62,7 +63,7 @@ class Results:
         -------
         float
             Depth of lithospheric mantle / Moho from sea level (m)
-        """
+        """    
         depth_idx= np.where(self.sediment_ids(age) == -2)[0][0]
         return self._depth[depth_idx,age]
 
@@ -78,7 +79,7 @@ class Results:
         -------
         float
             Depth of Asthenosphere from sea level (m)
-        """
+        """         
         depth_idx= np.where(self.sediment_ids(age) == -3)[0][0]
         return self._depth[depth_idx,age]
 
@@ -572,7 +573,7 @@ class Results_interpolator:
             for n in self._builder.iter_node():
                 if n._full_simulation is False:
                     idx = n.indexer
-                    val =interped[idx[0],idx[1]]
+                    val =interped[idx[1],idx[0]]
                     setattr(n,prop,val)
         return
     
@@ -594,7 +595,7 @@ class Results_interpolator:
                         if isinstance(getattr(node,prop),type(None)):
                             setattr(node,prop,np.zeros(self.n_age))
                         idx = node.indexer
-                        interpolated_val =interp_all_this_age[idx[0],idx[1]]
+                        interpolated_val =interp_all_this_age[idx[1],idx[0]]
                         arr = getattr(node,prop)
                         arr[age] =interpolated_val
                         setattr(node,prop,arr)

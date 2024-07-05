@@ -138,13 +138,21 @@ def interpolateNode(interpolationNodes: List[single_node], interpolationWeights=
     node.X = np.sum( np.array( [node.X * w for node,w in zip(interpolationNodes,iWeightNorm)] ) ) 
     node.Y = np.sum( np.array( [node.Y * w for node,w in zip(interpolationNodes,iWeightNorm)] ) )
 
-    times = range(node.result._depth.shape[1])
+    # self.top_crust_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -1)[0][0], age] for age in range(self.max_time)]
+    # #print ("PING B")
+    # self.top_lith_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -2)[0][0], age] for age in range(self.max_time)]
+    # #print ("PING C")
+    # self.top_aest_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -3)[0][0], age] for age in range(self.max_time)]
+    # #print ("PING D")
+
+    # self.top_lithosphere(age)-self.top_crust(age)
+
     if node.subsidence is None:
-        node.subsidence = np.sum( np.array( [ [node.result.seabed(t) for t in times] * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
+        node.subsidence = np.sum( np.array( [ node.seabed_arr[:] * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
     if node.crust_ls is None:
-        node.crust_ls = np.sum( np.array( [ [node.result.crust_thickness(t) for t in times] * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
+        node.crust_ls = np.sum( np.array( [ (node.top_lith_arr[:]-node.top_crust_arr[:]) * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
     if node.lith_ls is None:
-        node.lith_ls = np.sum( np.array( [ [node.result.lithosphere_thickness(t) for t in times] * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
+        node.crust_ls = np.sum( np.array( [ (node.top_aest_arr[:]-node.top_lithosphere[:]) * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
 
     if node.beta is None:
         node.beta = np.sum( np.array( [node.beta * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
@@ -152,10 +160,10 @@ def interpolateNode(interpolationNodes: List[single_node], interpolationWeights=
         node.kAsth = np.sum( np.array( [node.kAsth * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
     if node.kLith is None:
         node.kLith = np.sum( np.array( [node.kLith * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
-    if node._depth_out is None:
-        node._depth_out = np.sum([node.result._depth_out*w for n,w in zip(interpolationNodes[0:1], [1] )], axis=0)
-    if node.temperature_out is None:
-        node.temperature_out = np.sum([n.result.temperature_out*w for n,w in zip(interpolationNodes[0:1], [1] )], axis=0)
+    # if node._depth_out is None:
+    #     node._depth_out = np.sum([node.result._depth_out*w for n,w in zip(interpolationNodes[0:1], [1] )], axis=0)
+    # if node.temperature_out is None:
+    #     node.temperature_out = np.sum([n.result.temperature_out*w for n,w in zip(interpolationNodes[0:1], [1] )], axis=0)
 
     if node.sed is None:
         node.sed = np.sum([n.sed*w for n,w in zip(interpolationNodes,iWeightNorm)], axis=0)
@@ -167,7 +175,7 @@ def interpolateNode(interpolationNodes: List[single_node], interpolationWeights=
 def interpolate_all_nodes(builder:Builder)->Builder:
     for ni in range(len(builder.nodes)):
         for nj in range(len(builder.nodes[ni])):
-            if builder.nodes[ni][nj] is False:
+            if (builder.nodes[ni][nj] is False) or (not builder.nodes[ni][nj]._full_simulation):
                 closest_x_up = []
                 for j in range(ni,len(builder.nodes[nj])):
                     matching_x = [ i[0] for i in builder.indexer_full_sim if i[0]==j ]
@@ -195,6 +203,7 @@ def interpolate_all_nodes(builder:Builder)->Builder:
 
                 interpolationNodes = [  builder.nodes[i[0]][i[1]] for i in itertools.product(closest_x_up+closest_x_down, closest_y_up+closest_y_down)  ]
                 interpolationNodes = [nn for nn in interpolationNodes if nn is not False]
+                interpolationNodes = [nn for nn in interpolationNodes if nn._full_simulation]
                 node = interpolateNode(interpolationNodes)
                 node.X, node.Y = builder.grid.location_grid[ni,nj,:]
                 builder.nodes[ni][nj] = node

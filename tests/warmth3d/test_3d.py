@@ -11,7 +11,7 @@ import time
 @pytest.mark.mpi
 def test_3d_compare():
     comm = MPI.COMM_WORLD
-    inc = 2100
+    inc = 1000
     model_pickled = f"model-out-inc_{inc}.p"
     if comm.rank == 0 and not os.path.isfile(model_pickled):
         global runtime_1D_sim
@@ -46,7 +46,7 @@ def test_3d_compare():
             i.adiab = 0.3e-3
 
 
-        model.simulator.simulate_every = 1
+        model.simulator.simulate_every = 2
 
         #
         # set 1D simulation parameters to be most similar to those in the (later) 3D simulation, for better comparison
@@ -62,7 +62,6 @@ def test_3d_compare():
         print("Total time 1D simulations:", runtime_1D_sim)
 
         pickle.dump( model, open( model_pickled, "wb" ) )
-        # model = pickle.load( open( model_pickled, "rb" ) )
         try:
             os.mkdir('mesh')
         except FileExistsError:
@@ -84,7 +83,12 @@ def test_3d_compare():
         hx = nnx // 2
         hy = nny // 2
 
-        nn = model.builder.nodes[hy-mm2.padX][hx-mm2.padX]
+        nn0 = model.builder.nodes[hy-mm2.padX][hx-mm2.padX]
+        
+        node_result_path = str(nn0.node_path).replace(".pickle", "_results")
+        assert os.path.exists(node_result_path), f"ERROR: Node result file {node_result_path} is missing."
+
+        nn = pickle.load(open(node_result_path,"rb"))
         dd = nn._depth_out[:,0]
 
         mm2_pos, mm2_temp = mm2.get_node_pos_and_temp(-1)

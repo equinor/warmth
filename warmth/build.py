@@ -108,7 +108,10 @@ class single_node:
         self._crust_ls:np.ndarray[np.float64]|None=None
         self._lith_ls:np.ndarray[np.float64]|None=None
         self._subsidence:np.ndarray[np.float64]|None=None
-    
+        self.seabed_arr:np.ndarray[np.float64]|None=None
+        self.top_crust_arr:np.ndarray[np.float64]|None=None
+        self.top_lith_arr:np.ndarray[np.float64]|None=None
+        self.top_aest_arr:np.ndarray[np.float64]|None=None
 
     @property
     def shf(self)->float:
@@ -123,18 +126,37 @@ class single_node:
         Results|None
             None if not simulated
         """
-        items = [self._depth_out,self.temperature_out,self._idsed]
-        if any(isinstance(i,type(None)) for i in items):
-            return None
-        else:
-            return Results(self._depth_out,self.temperature_out,self._idsed,self.sediments,self.kCrust,self.kLith,self.kAsth)
+        return Results(self._depth_out,self.temperature_out,self._idsed,self.sediments,self.kCrust,self.kLith,self.kAsth)
+
+    def clear_unused_data(self):
+        """Removes most arrays of detailed input and output that are not needed by warmth3D, in order to save memory. 
+        """
+        # self.max_time = self._depth_out.shape[1]
+        self._depth_out = None
+        self.temperature_out =None
+        self._idsed = None
+        self.coord_initial = None
+        self._crust_ls = None
+        self._lith_ls = None
+        self._subsidence =None
+
+    def compute_derived_arrays(self):
+        """Computes depths of seabed, top crust, top lithosphere and top aestenosphere, and stores them with the node.
+           This allows the depth and temperature arrays to be discarded to save memory.
+        """
+        self.top_crust_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -1)[0][0], age] for age in range(self.max_time)]
+        self.top_lith_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -2)[0][0], age] for age in range(self.max_time)]
+        self.top_aest_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -3)[0][0], age] for age in range(self.max_time)]
+        self.seabed_arr = np.array( [ self._depth_out[np.where(~np.isnan(self.temperature_out[:,age]))[0][0],age] for age in range(self.max_time)])
+
+
     @property
     def crust_ls(self)->np.ndarray[np.float64]:
         if isinstance(self.result,Results):
-            all_age = self.result.ages
+            all_age = np.arange(len(self.top_lith_arr),dtype=np.int32)
             val = np.zeros(all_age.size)
             for age in all_age:
-                val[age] = self.result.crust_thickness(age)
+                val[age] = self.top_lith_arr[age] - self.top_crust_arr[age]
     
             return val
         else:
@@ -142,31 +164,34 @@ class single_node:
     @property
     def lith_ls(self)->np.ndarray[np.float64]:
         if isinstance(self.result,Results):
-            all_age = self.result.ages
+            all_age = np.arange(len(self.top_lith_arr),dtype=np.int32)
             val = np.zeros(all_age.size)
             for age in all_age:
-                val[age] = self.result.lithosphere_thickness(age)
+                val[age] = self.top_aest_arr[age] - self.top_lith_arr[age]
             return val
         else:
             return self._lith_ls          
     @property
     def subsidence(self)->np.ndarray[np.float64]:
         if isinstance(self.result,Results):
-            all_age = self.result.ages
+            all_age = np.arange(len(self.top_lith_arr),dtype=np.int32)
             val = np.zeros(all_age.size)
             for age in all_age:
-                val[age] = self.result.seabed(age)
+                val[age] = self.seabed_arr[age]
+                # val[age] = self.result.seabed(age)
             return val
         else:
             return self._subsidence 
     @property
     def sed_thickness_ls(self)->float:
         if isinstance(self.result,Results):
-            all_age = self.result.ages
+            all_age = np.arange(len(self.top_lith_arr),dtype=np.int32)
             val = np.zeros(all_age.size)
             for age in all_age:
-                seabed = self.result.seabed(age)
-                top_crust = self.result.top_crust(age)
+                # seabed = self.result.seabed(age)
+                # top_crust = self.result.top_crust(age)
+                seabed = self.seabed_arr[age]
+                top_crust = self.top_crust_arr[age]
                 val[age] = top_crust - seabed
             return val
         else:

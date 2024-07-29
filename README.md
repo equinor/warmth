@@ -7,6 +7,7 @@
 ![Python](https://img.shields.io/pypi/pyversions/warmth)
 [![PyPI version](https://badge.fury.io/py/warmth.svg)](https://badge.fury.io/py/wamrth)
 ![License](https://img.shields.io/github/license/equinor/warmth)
+
 [Documentation](https://equinor.github.io/warmth/)
 
 warmth is a python package used for modeling thermal evolution based on McKenzie's type basin extension. It can be use for:

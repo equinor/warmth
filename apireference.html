@@ -86,6 +86,8 @@
 <li class="toctree-l4"><a class="reference internal" href="#warmth.build.single_node.error"><code class="docutils literal notranslate"><span class="pre">single_node.error</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#warmth.build.single_node.simulated_at"><code class="docutils literal notranslate"><span class="pre">single_node.simulated_at</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#warmth.build.single_node.result"><code class="docutils literal notranslate"><span class="pre">single_node.result</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#warmth.build.single_node.clear_unused_data"><code class="docutils literal notranslate"><span class="pre">single_node.clear_unused_data()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#warmth.build.single_node.compute_derived_arrays"><code class="docutils literal notranslate"><span class="pre">single_node.compute_derived_arrays()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#warmth.build.single_node.fitting"><code class="docutils literal notranslate"><span class="pre">single_node.fitting</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#warmth.build.single_node.sediments"><code class="docutils literal notranslate"><span class="pre">single_node.sediments</span></code></a></li>
 </ul>
@@ -124,6 +126,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#module-warmth.forward_modelling">Forward model</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#warmth.forward_modelling.Forward_model"><code class="docutils literal notranslate"><span class="pre">Forward_model</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#warmth.forward_modelling.Forward_model.simulate_single_node"><code class="docutils literal notranslate"><span class="pre">Forward_model.simulate_single_node()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#warmth.forward_modelling.Forward_model.sediment_density"><code class="docutils literal notranslate"><span class="pre">Forward_model.sediment_density()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#warmth.forward_modelling.Forward_model.simulate_continental"><code class="docutils literal notranslate"><span class="pre">Forward_model.simulate_continental()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#warmth.forward_modelling.Forward_model.compaction"><code class="docutils literal notranslate"><span class="pre">Forward_model.compaction()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#warmth.forward_modelling.Forward_model.decompaction"><code class="docutils literal notranslate"><span class="pre">Forward_model.decompaction()</span></code></a></li>
@@ -141,7 +144,6 @@
 <li class="toctree-l2"><a class="reference internal" href="#module-warmth.postprocessing">Results</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#warmth.postprocessing.Results"><code class="docutils literal notranslate"><span class="pre">Results</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#warmth.postprocessing.Results.resultValues"><code class="docutils literal notranslate"><span class="pre">Results.resultValues</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#warmth.postprocessing.Results.ages"><code class="docutils literal notranslate"><span class="pre">Results.ages</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#warmth.postprocessing.Results.top_crust"><code class="docutils literal notranslate"><span class="pre">Results.top_crust()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#warmth.postprocessing.Results.top_lithosphere"><code class="docutils literal notranslate"><span class="pre">Results.top_lithosphere()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#warmth.postprocessing.Results.top_asthenosphere"><code class="docutils literal notranslate"><span class="pre">Results.top_asthenosphere()</span></code></a></li>
@@ -512,6 +514,19 @@
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="warmth.build.single_node.clear_unused_data">
+<span class="sig-name descname"><span class="pre">clear_unused_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#warmth.build.single_node.clear_unused_data" title="Link to this definition"></a></dt>
+<dd><p>Removes most arrays of detailed input and output that are not needed by warmth3D, in order to save memory.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="warmth.build.single_node.compute_derived_arrays">
+<span class="sig-name descname"><span class="pre">compute_derived_arrays</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#warmth.build.single_node.compute_derived_arrays" title="Link to this definition"></a></dt>
+<dd><p>Computes depths of seabed, top crust, top lithosphere and top aestenosphere, and stores them with the node.
+This allows the depth and temperature arrays to be discarded to save memory.</p>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="warmth.build.single_node.fitting">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">fitting</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#warmth.build.single_node.fitting" title="Link to this definition"></a></dt>
@@ -805,6 +820,26 @@
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="warmth.forward_modelling.Forward_model.sediment_density">
+<span class="sig-name descname"><span class="pre">sediment_density</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mean_porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">density</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#warmth.forward_modelling.Forward_model.sediment_density" title="Link to this definition"></a></dt>
+<dd><p>Effective density of sediment cells taking into account of water density in pores</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mean_porosity</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – Porosity of the sediments</p></li>
+<li><p><strong>density</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – Density of sediment</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>mean_sediments_density</strong> – Effective density of sediment cells</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray[np.float64]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="warmth.forward_modelling.Forward_model.simulate_continental">
 <span class="sig-name descname"><span class="pre">simulate_continental</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#warmth.forward_modelling.Forward_model.simulate_continental" title="Link to this definition"></a></dt>
 <dd><p>Run forward model for single or multi rift</p>
@@ -969,22 +1004,7 @@
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>depth</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float64</span></code>])</p></li>
 <li><p><strong>layerId</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int32</span></code>])</p></li>
-<li><p><strong>value</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float64</span></code>])</p></li>
 </ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="warmth.postprocessing.Results.ages">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ages</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">int32</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#warmth.postprocessing.Results.ages" title="Link to this definition"></a></dt>
-<dd><p>Array of all simulated ages</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Array of ages</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>np.ndarray</p>
 </dd>
 </dl>
 </dd></dl>

@@ -80,7 +80,6 @@ def test_results():
     k_lith = 3
     k_asth=5
     r = Results(d,t,idsed,sed,k_crust,k_lith,k_asth)
-    assert np.allclose(r.ages,np.arange(2))
     np.testing.assert_almost_equal(r.top_crust(1),100,decimal=2)
     np.testing.assert_almost_equal(r.crust_thickness(1),100,decimal=2)
     np.testing.assert_almost_equal(r.top_lithosphere(1),200,decimal=2)

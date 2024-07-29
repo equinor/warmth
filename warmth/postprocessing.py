@@ -23,17 +23,6 @@ class Results:
         depth: np.ndarray[np.float64]
         layerId: np.ndarray[np.int32]
         values:np.ndarray[np.float64]
-    
-    @property
-    def ages(self)->np.ndarray[np.int32]:
-        """Array of all simulated ages
-
-        Returns
-        -------
-        np.ndarray
-            Array of ages
-        """
-        return np.arange(self._max_time,dtype=np.int32)
 
     def top_crust(self,age:int)->float:
         """Depth of crust

@@ -39,3 +39,8 @@ pip install .
 For full 3D simulation, dolfinx is required.
 
 See https://docs.fenicsproject.org/dolfinx/main/python/installation.html for installation instructions.
+
+## Tests
+Requires dolfinx v0.6.0
+
+```mpirun -n 2 python3 -m pytest --with-mpi --cov-report=term-missing --cov-report=xml --cov=warmth tests```

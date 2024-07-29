@@ -13,11 +13,6 @@ permissions:
   contents: write
 
 jobs:
-  # test3d:
-  #   uses: equinor/warmth/.github/workflows/python-test-3d.yml@main
-  #   with:
-  #     event_type: ${{ github.event_name}}
-  #     action_type: ${{ github.event.action}}
   test1d:
     uses: equinor/warmth/.github/workflows/python-test.yml@main
     with:

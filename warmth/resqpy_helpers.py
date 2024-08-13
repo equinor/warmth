@@ -459,7 +459,8 @@ def write_hexa_grid_with_properties(filename, nodes, cells, modelTitle = "hexame
 
 
 def write_hexa_grid_with_timeseries(filename, nodes_series, cells, modelTitle = "hexamesh",
-    Temp_per_vertex_series=None, age_per_vertex=None, poro0_per_cell=None, decay_per_cell=None, density_per_cell=None,
+    Temp_per_vertex_series=None, Ro_per_vertex_series= None, 
+    age_per_vertex=None, poro0_per_cell=None, decay_per_cell=None, density_per_cell=None,
     cond_per_cell=None, rhp_per_cell=None, lid_per_cell=None ):
     """Writes the given hexahedral mesh, defined by arrays of nodes and cell indices, into a RESQML .epc file
        Given SubsHeat properties are optionally written.
@@ -583,6 +584,19 @@ def write_hexa_grid_with_timeseries(filename, nodes_series, cells, modelTitle = 
                                                 time_index = time_index,
                                                 indexable_element = 'nodes')
                                                 # points = True)
+        if (Ro_per_vertex_series is not None):
+            ro = Ro_per_vertex_series[time_index,:].astype(np.float32)
+            pc.add_cached_array_to_imported_list(ro,
+                                                    'Vitrinite reflectance',
+                                                    "%Ro",
+                                                    uom = 'percent',
+                                                    property_kind = 'dimensionless',
+                                                    realization = 0,
+                                                    time_index = time_index,
+                                                    indexable_element = 'nodes')
+                                                    # points = True)
+
+
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = gts.uuid)
 

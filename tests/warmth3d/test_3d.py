@@ -11,7 +11,7 @@ import time
 @pytest.mark.mpi
 def test_3d_compare():
     comm = MPI.COMM_WORLD
-    inc = 5000
+    inc = 3000
     model_pickled = f"model-out-inc_{inc}.p"
     if comm.rank == 0 and not os.path.isfile(model_pickled):
         global runtime_1D_sim

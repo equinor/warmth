@@ -12,6 +12,7 @@ from progress.bar import Bar
 from warmth.build import single_node, Builder
 from .parameters import Parameters
 from warmth.logging import logger
+from warmth.postprocessing import VR
 from .mesh_utils import  top_crust,top_sed,thick_crust,  top_lith, top_asth, top_sed_id, bottom_sed_id,interpolateNode, interpolate_all_nodes
 from .resqpy_helpers import write_tetra_grid_with_properties, write_hexa_grid_with_timeseries, write_hexa_grid_with_properties,read_mesh_resqml_hexa
 def tic():
@@ -336,6 +337,7 @@ class UniformNodeGridFixedSizeMeshModel:
         age_per_vertex_keep = np.array([ self.age_per_vertex[i] for i in range(n_vertices) if i in p_to_keep ])
         Temp_per_vertex_series = np.empty([len(self.time_indices), len(p_to_keep)])
         points_cached_series = np.empty([len(self.time_indices), len(p_to_keep),3])
+        Ro_per_vertex_series = np.empty([len(self.time_indices), len(p_to_keep)])
 
         for idx, tti in enumerate(self.time_indices): # oldest first
             if idx > 0:
@@ -350,14 +352,20 @@ class UniformNodeGridFixedSizeMeshModel:
                     point_original_to_cached[i]= count
                     count += 1
             
-                    
+        for i in range(Temp_per_vertex_series.shape[1]):
+            ts = Temp_per_vertex_series[:,i]
+            ro = VR.easyRoDL(ts)
+            if (i%100==0):
+                print(f"index {i} RO {ro[0:10]} {ro[-10:]}", flush=True)
+            Ro_per_vertex_series[:,i] = ro.flatten()
+               
         hexa_renumbered = [ [point_original_to_cached[i] for i in hexa] for hexa in hexa_to_keep ]
 
         from os import path
 
         filename_hex = path.join(out_path, self.modelName+'_hexa_ts_'+str(self.tti)+'.epc')
         write_hexa_grid_with_timeseries(filename_hex, points_cached_series, hexa_renumbered, "hexamesh",
-            Temp_per_vertex_series,age_per_vertex_keep, poro0_per_cell, decay_per_cell, density_per_cell,
+            Temp_per_vertex_series, Ro_per_vertex_series, age_per_vertex_keep, poro0_per_cell, decay_per_cell, density_per_cell,
             cond_per_cell, rhp_per_cell, lid_per_cell )
         return filename_hex
 

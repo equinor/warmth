@@ -48,13 +48,13 @@ class _nodeWorker:
             fw = Forward_model(self.parameters, self.node)
             if self.node._full_simulation:
                 fw.simulate_single_node()
+                self.node.max_time = self.node._depth_out.shape[1]
+                self.node.compute_derived_arrays()
             else:
                 fw._sedimentation()
             self.node = fw.current_node
             self._pad_sediments()
             self.node.simulated_at = time.time()
-            self.node.max_time = self.node._depth_out.shape[1]
-            self.node.compute_derived_arrays()
             self.node.node_path = self.node_path
             filepath = self._save_results()
             # Delete input node

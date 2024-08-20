@@ -431,10 +431,11 @@ class VR:
         DI = np.zeros([nt, nw])
 
         # When computing the deltas, drop index 0, start at index 1
-        for i in range(1, time.size):
-            for j in range(0, weights.size):
-                DI[i, j] = DI[i - 1, j] + (I[i, j] - I[i - 1, j]) / heat_rate[i]
-                CR_easy[i] += weights[j] * (1 - np.exp(-DI[i, j]))
+        with np.errstate(divide='ignore',invalid='ignore'):
+            for i in range(1, time.size):
+                for j in range(0, weights.size):
+                    DI[i, j] = DI[i - 1, j] + (I[i, j] - I[i - 1, j]) / heat_rate[i]
+                    CR_easy[i] += weights[j] * (1 - np.exp(-DI[i, j]))
 
         return CR_easy
     

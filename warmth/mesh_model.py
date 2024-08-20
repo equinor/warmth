@@ -4,6 +4,7 @@ import numpy as np
 from mpi4py import MPI
 import meshio
 import dolfinx  
+from os import path
 from petsc4py import PETSc
 import ufl
 import sys
@@ -167,7 +168,6 @@ class UniformNodeGridFixedSizeMeshModel:
         T_per_vertex = [ self.uh.x.array[i] for i in range(self.mesh.geometry.x.shape[0]) if i in p_to_keep  ]
         age_per_vertex = [ self.mesh_vertices_age[i] for i in range(self.mesh.geometry.x.shape[0]) if i in p_to_keep  ]
         
-        from os import path
         filename = path.join(out_path, self.modelName+'_'+str(self.tti)+'.epc')
         write_tetra_grid_with_properties(filename, np.array(points_cached), tet_renumbered, "tetramesh",
             np.array(T_per_vertex), np.array(age_per_vertex), poro0_per_cell, decay_per_cell, density_per_cell,
@@ -290,7 +290,6 @@ class UniformNodeGridFixedSizeMeshModel:
         T_per_vertex_keep = [ T_per_vertex[i] for i in range(nv) if i in p_to_keep ]
         age_per_vertex_keep = [ self.age_per_vertex[i] for i in range(nv) if i in p_to_keep ]
 
-        from os import path
         filename_hex = path.join(out_path, self.modelName+'_hexa_'+str(tti)+'.epc')
         points_cached=np.array(points_cached)
         write_hexa_grid_with_properties(filename_hex, points_cached, hexa_renumbered, "hexamesh",
@@ -355,13 +354,11 @@ class UniformNodeGridFixedSizeMeshModel:
         for i in range(Temp_per_vertex_series.shape[1]):
             ts = Temp_per_vertex_series[:,i]
             ro = VR.easyRoDL(ts)
-            if (i%100==0):
-                print(f"index {i} RO {ro[0:10]} {ro[-10:]}", flush=True)
             Ro_per_vertex_series[:,i] = ro.flatten()
                
         hexa_renumbered = [ [point_original_to_cached[i] for i in hexa] for hexa in hexa_to_keep ]
 
-        from os import path
+        
 
         filename_hex = path.join(out_path, self.modelName+'_hexa_ts_'+str(self.tti)+'.epc')
         write_hexa_grid_with_timeseries(filename_hex, points_cached_series, hexa_renumbered, "hexamesh",

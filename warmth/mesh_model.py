@@ -1171,7 +1171,7 @@ class UniformNodeGridFixedSizeMeshModel:
 
         a = self.c_rho*u*v*ufl.dx + dt*ufl.dot(self.thermalCond*ufl.grad(u), ufl.grad(v)) * ufl.dx
         f = self.rhpFcn 
-        logger.info(f"mean RHP {np.mean(self.rhpFcn.x.array[:])}")
+        #logger.info(f"mean RHP {np.mean(self.rhpFcn.x.array[:])}")
 
         if ( self.useBaseFlux ):
             baseFlux = self.baseFluxMagnitude
@@ -1184,21 +1184,16 @@ class UniformNodeGridFixedSizeMeshModel:
                 # NOTE: CGorder>1 is under development, not functional
                 #
                 def marker(x):
-                    print(x.shape, x)
                     return x[2,:]>3990
                 facets = dolfinx.mesh.locate_entities_boundary(self.mesh, dim=(self.mesh.topology.dim - 2),
                                         marker=marker )
-                #print(type(facets), facets.shape)
                 dofs = dolfinx.fem.locate_dofs_topological(V=self.V, entity_dim=1, entities=facets)
-                #print( type(dofs), len(dofs))
-                #print(facets.shape, dofs.shape)
                 if (len(facets)>0):
                     #print( np.amax(facets))
                     pass
                 if (len(dofs)>0):
                     #print( np.amax(dofs))
                     pass
-                #print(type(domain_c.x.array), len(domain_c.x.array))
                 domain_c.x.array[ dofs ] = 1
             else:
                 basepos = self.getBaseAtMultiplePos(self.mesh.geometry.x[:,0], self.mesh.geometry.x[:,1])
@@ -1215,7 +1210,7 @@ class UniformNodeGridFixedSizeMeshModel:
             domain_zero = dolfinx.fem.Function(self.V)
             toppos = self.getSubsidenceAtMultiplePos(self.mesh.geometry.x[:,0], self.mesh.geometry.x[:,1])
             domain_zero.x.array[  self.mesh.geometry.x[:,2] < toppos+0.01 ] = 1
-            logger.debug(f"Neumann conditions: , {self.tti}, {np.count_nonzero(domain_c.x.array)}, {np.count_nonzero(domain_zero.x.array)}")
+            #logger.debug(f"Neumann conditions: , {self.tti}, {np.count_nonzero(domain_c.x.array)}, {np.count_nonzero(domain_zero.x.array)}")
 
             g = (-1.0*baseFlux) * ufl.conditional( domain_c > 0, 1.0, 0.0 )
             L = (self.c_rho*self.u_n + dt*f)*v*ufl.dx - dt * g * v * ufl.ds    # last term reflects Neumann BC 
@@ -1612,7 +1607,6 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
                 tic()
                 mm2.updateMesh(tti, optimized=True)
                 toc(msg="update mesh")
-            logger.info(f"Solving {tti}")
             mm2.useBaseFlux = (base_flux is not None)
             mm2.baseFluxMagnitude = base_flux
 
@@ -1635,7 +1629,6 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
             
             mms2.append(mm2)
             mms_tti.append(tti)
-            logger.info(f"Simulated time step {tti}")
             bar.next()
     logger.info(f"total time solve 3D: {time_solve}")
     if (writeout_final):

@@ -350,7 +350,7 @@ class UniformNodeGridFixedSizeMeshModel:
                     points_cached_series[idx,count,:]=x_original_order[i,:]
                     point_original_to_cached[i]= count
                     count += 1
-            
+        logger.info("Calculating vitrinite reflectance EasyRo%DL")
         for i in range(Temp_per_vertex_series.shape[1]):
             ts = Temp_per_vertex_series[:,i]
             ro = VR.easyRoDL(ts)

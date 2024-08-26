@@ -1505,10 +1505,10 @@ class Forward_model:
             else:
                 beta = old_beta*1.2
 
-            multiplier = self._get_beta_multiplier(wd_diff_list[-1])
+            # multiplier = self._get_beta_multiplier(wd_diff_list[-1])
 
-            if beta*multiplier < self._parameters.max_beta:
-                beta = beta * multiplier
+            # if beta*multiplier < self._parameters.max_beta:
+            #     beta = beta * multiplier
         else:
             beta = old_beta+0.2
         return beta

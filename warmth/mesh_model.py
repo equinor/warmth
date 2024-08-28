@@ -8,6 +8,7 @@ from os import path
 from petsc4py import PETSc
 import ufl
 import sys
+import time
 from scipy.interpolate import LinearNDInterpolator
 from progress.bar import Bar
 from warmth.build import single_node, Builder
@@ -18,12 +19,10 @@ from .mesh_utils import  top_crust,top_sed,thick_crust,  top_lith, top_asth, top
 from .resqpy_helpers import write_tetra_grid_with_properties, write_hexa_grid_with_timeseries, write_hexa_grid_with_properties,read_mesh_resqml_hexa
 def tic():
     #Homemade version of matlab tic and toc functions
-    import time
     global startTime_for_tictoc
     startTime_for_tictoc = time.time()
 
 def toc(msg=""):
-    import time
     if 'startTime_for_tictoc' in globals():
         delta = time.time() - startTime_for_tictoc
         print (msg+": Elapsed time is " + str(delta) + " seconds.")
@@ -350,12 +349,13 @@ class UniformNodeGridFixedSizeMeshModel:
                     points_cached_series[idx,count,:]=x_original_order[i,:]
                     point_original_to_cached[i]= count
                     count += 1
-        logger.info("Calculating vitrinite reflectance EasyRo%DL")
+        s = time.time()
+        logger.debug("Calculating vitrinite reflectance EasyRo%DL")
         for i in range(Temp_per_vertex_series.shape[1]):
             ts = Temp_per_vertex_series[:,i]
             ro = VR.easyRoDL(ts)
             Ro_per_vertex_series[:,i] = ro.flatten()
-               
+        logger.debug(f"VR calculation {time.time()-s}s")
         hexa_renumbered = [ [point_original_to_cached[i] for i in hexa] for hexa in hexa_to_keep ]
 
         

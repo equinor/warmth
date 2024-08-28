@@ -560,7 +560,7 @@ def write_hexa_grid_with_timeseries(filename, nodes_series, cells, modelTitle = 
     pc = hexa.property_collection
 
     # nodes0 = nodes.copy()
-    for time_index in range(nodes_series.shape[0]-1,-1,-1):  #oldest first
+    for time_index in range(nodes_series.shape[0]):  #oldest first
 
         nodes2 = nodes_series[time_index,:,:].astype(np.float32)
 

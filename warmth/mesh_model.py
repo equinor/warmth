@@ -351,6 +351,7 @@ class UniformNodeGridFixedSizeMeshModel:
                     count += 1
         s = time.time()
         logger.debug("Calculating vitrinite reflectance EasyRo%DL")
+        logger.debug(Temp_per_vertex_series.shape)
         for i in range(Temp_per_vertex_series.shape[1]):
             ts = Temp_per_vertex_series[:,i]
             ro = VR.easyRoDL(ts)

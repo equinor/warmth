@@ -1,3 +1,4 @@
+import math
 import time
 from typing import Tuple, TypedDict
 from scipy import interpolate
@@ -365,7 +366,8 @@ class Results:
         for i in range(temp_h.shape[0]):
             cell = temp_h[i]
             if Rotype=="Easy%RoDL":
-                vr = VR.easyRoDL(cell[~np.isnan(cell)])
+                vr = VR.easyRoDL(np.flip(cell[~np.isnan(cell)]))
+                vr = np.flip(vr)
             else:
                 raise Exception (f"{Rotype} not implemented")
             temp_h[i,:vr.size]=vr.flatten()
@@ -435,8 +437,8 @@ class VR:
             for i in range(1, time.size):
                 for j in range(0, weights.size):
                     DI[i, j] = DI[i - 1, j] + (I[i, j] - I[i - 1, j]) / heat_rate[i]
+                    DI = np.nan_to_num(DI)
                     CR_easy[i] += weights[j] * (1 - np.exp(-DI[i, j]))
-
         return CR_easy
     
     @staticmethod
@@ -454,7 +456,6 @@ class VR:
             Vitrinite reflectance based on Easy%RoDL
         """
         temp_k = temperature+273
-        temp_k = np.flip(temp_k)
         time=np.arange(np.count_nonzero(~np.isnan(temp_k)))
         A_V = 2e15
         E_easy_V = np.array(
@@ -486,7 +487,7 @@ class VR:
 
         Cr_easy_V = VR.cum_reacted(A_V, E_easy_V, weights_easy_V, time, temp_k)
         RoV = 0.223 * np.exp(3.7 * Cr_easy_V)
-        return np.flip(RoV)
+        return RoV
     
 class Results_interpolator:
     def __init__(self, builder) -> None:

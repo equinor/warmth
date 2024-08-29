@@ -297,7 +297,7 @@ class UniformNodeGridFixedSizeMeshModel:
         return filename_hex
 
 
-    def write_hexa_mesh_timeseries( self, out_path):
+    def write_hexa_mesh_timeseries( self, out_path, run_ro=False):
         """Prepares arrays and calls the RESQML output helper function for hexa meshes:  the lith and aesth are removed, and the remaining
            vertices and cells are renumbered;  the sediment properties are prepared for output.
 
@@ -335,7 +335,7 @@ class UniformNodeGridFixedSizeMeshModel:
         age_per_vertex_keep = np.array([ self.age_per_vertex[i] for i in range(n_vertices) if i in p_to_keep ])
         Temp_per_vertex_series = np.empty([len(self.time_indices), len(p_to_keep)])
         points_cached_series = np.empty([len(self.time_indices), len(p_to_keep),3])
-        Ro_per_vertex_series = np.empty([len(self.time_indices), len(p_to_keep)])
+        Ro_per_vertex_series = None
 
         for idx, tti in enumerate(self.time_indices): # oldest first
             if idx > 0:
@@ -349,18 +349,16 @@ class UniformNodeGridFixedSizeMeshModel:
                     points_cached_series[idx,count,:]=x_original_order[i,:]
                     point_original_to_cached[i]= count
                     count += 1
-        s = time.time()
-        logger.debug("Calculating vitrinite reflectance EasyRo%DL")
-        logger.debug(Temp_per_vertex_series.shape)
-        for i in range(Temp_per_vertex_series.shape[1]):
-            ts = Temp_per_vertex_series[:,i]
-            ro = VR.easyRoDL(ts)
-            Ro_per_vertex_series[:,i] = ro.flatten()
-        logger.debug(f"VR calculation {time.time()-s}s")
+        if run_ro:
+            s = time.time()
+            logger.debug("Calculating vitrinite reflectance EasyRo%DL")
+            Ro_per_vertex_series = np.empty([len(self.time_indices), len(p_to_keep)])
+            for i in range(Temp_per_vertex_series.shape[1]):
+                ts = Temp_per_vertex_series[:,i]
+                ro = VR.easyRoDL(ts)
+                Ro_per_vertex_series[:,i] = ro.flatten()
+            logger.debug(f"VR calculation {time.time()-s}s")
         hexa_renumbered = [ [point_original_to_cached[i] for i in hexa] for hexa in hexa_to_keep ]
-
-        
-
         filename_hex = path.join(out_path, self.modelName+'_hexa_ts_'+str(self.tti)+'.epc')
         write_hexa_grid_with_timeseries(filename_hex, points_cached_series, hexa_renumbered, "hexamesh",
             Temp_per_vertex_series, Ro_per_vertex_series, age_per_vertex_keep, poro0_per_cell, decay_per_cell, density_per_cell,

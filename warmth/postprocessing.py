@@ -406,14 +406,14 @@ class VR:
         nw = weights.size
 
         # Heating rate between different time-steps, degC/s
-        heat_rate = np.zeros([nt, 1])
+        heat_rate = np.zeros(nt)
         for i in range(1, time.shape[0]):
             heat_rate[i] = (
                 (temp_k[i] - temp_k[i - 1]) / (time[i] - time[i - 1]) / 31600000000000
             )
 
         # I: nt x nw, Equation 10 in Sweeney and Burnham, 1990
-        I = np.zeros([nt, nw])
+        I = np.zeros((nt, nw))
         for i in range(0, time.size):
             for j in range(0, weights.size):
                 E_RT_temp = E[j] / (c * temp_k[i])
@@ -426,19 +426,17 @@ class VR:
                         - (E_RT_temp**2 + 2.334733 * E_RT_temp + 0.250621)
                         / (E_RT_temp**2 + 3.330657 * E_RT_temp + 1.681534)
                     )
-                )
-
-        # Cumulative Reacted
-        CR_easy = np.zeros([nt, 1])
-        DI = np.zeros([nt, nw])
-
+                ).item()
+        CR_easy = np.zeros(heat_rate.size)
+        DI = np.zeros((heat_rate.size, weights.size))
         # When computing the deltas, drop index 0, start at index 1
-        with np.errstate(divide='ignore',invalid='ignore'):
-            for i in range(1, time.size):
-                for j in range(0, weights.size):
+        for i in range(1, heat_rate.size):
+            for j in range(0, weights.size):
+                if abs(heat_rate[i]) < 1e-15:
+                    DI[i, j] = 0
+                else:
                     DI[i, j] = DI[i - 1, j] + (I[i, j] - I[i - 1, j]) / heat_rate[i]
-                    DI = np.nan_to_num(DI)
-                    CR_easy[i] += weights[j] * (1 - np.exp(-DI[i, j]))
+                CR_easy[i] += weights[j] * (1 - np.exp(-DI[i, j]))
         return CR_easy
     
     @staticmethod

@@ -227,7 +227,10 @@ class single_node:
                 "topage and top have to be in ascending order")
         # TODO trucation
         #df.drop_duplicates(subset=["top"], keep="last", inplace=True)
-
+        if 'erosion' not in df:
+            df['erosion'] = 0
+        if 'erosion_duration' not in df:
+            df['erosion_duration'] = 0
         base = df["top"].values[1:]
         top = df["top"].values[:-1]
 
@@ -252,6 +255,7 @@ class single_node:
                 break
 
         baseage=df["topage"].values[1:]
+
         df = df[:-1]
         WD = top[0]
         with np.errstate(divide="ignore", invalid="ignore"):
@@ -272,8 +276,8 @@ class single_node:
             grain_thickness = (thickness / 1e3) * (1 - PhiMean)
             grain_thickness[grain_thickness == np.inf] = 0.0
             grain_thickness = np.nan_to_num(grain_thickness)
-
-        df_out = df.assign(top=top,base=base,baseage = baseage,thickness=thickness,grain_thickness=grain_thickness,phi_mean=PhiMean)
+            eroded_grain_thickness = (df["erosion"] / 1e3) * (1 - PhiMean)
+        df_out = df.assign(top=top,base=base,baseage = baseage,thickness=thickness,grain_thickness=grain_thickness,phi_mean=PhiMean, eroded_grain_thickness=eroded_grain_thickness, erosion_duration = df["erosion_duration"])
         return df_out
 
     @property
@@ -494,6 +498,8 @@ class Builder:
                 "decay",
                 "solidus",
                 "liquidus",
+                "erosion",
+                "erosion_duration"
             ]
         )
 
@@ -740,16 +746,9 @@ class Builder:
                         liquidus = np.append(liquidus, float(hor.liquidus))
                         strat = np.append(strat,hor.strat)
                         inputRef= np.append(inputRef,hor.horizon_index)
-
-        
                     df = pd.DataFrame({'top': top, 'topage': topage, 'k_cond': k_cond,
-                                                'rhp': rhp, 'phi': phi, 'decay': decay, 'solidus': solidus, 'liquidus': liquidus,'strat':strat,'horizonIndex':inputRef})
+                                                'rhp': rhp, 'phi': phi, 'decay': decay, 'solidus': solidus, 'liquidus': liquidus,'strat':strat,'horizonIndex':inputRef,'erosion':np.zeros_like(top),'erosion_duration': np.zeros_like(top)})
                     df = df.sort_values(by=["topage"],ignore_index=True)
-
-                    # print(df)
-                    #df.reset_index(drop=True,inplace=True)
-                    # df.at[2, 'top'] = np.nan            
-                    # df.at[3, 'top'] = np.nan
                     checker = self._check_nan_sed(df)
 
                     if checker is False:

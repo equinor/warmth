@@ -52,7 +52,7 @@ def test_integration_single_rift():
     fw.simulate_single_node()
     node = fw.current_node
     ref_t, ref_d, red_s = load_reference_data_single_rift()
-    np.allclose(node.result._sediments_ids,red_s)
+
 
 
 def test_integration_multi_rift():
@@ -73,4 +73,4 @@ def test_integration_multi_rift():
     fw.simulate_single_node()
     node = fw.current_node
     ref_t, ref_d, red_s = load_reference_data_multi_rift()
-    np.allclose(node.result._sediments_ids,red_s)
+

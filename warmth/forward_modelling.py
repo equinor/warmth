@@ -800,7 +800,7 @@ class Forward_model:
             layer_thickness = seddep/(1-phiavg)
         return layer_thickness
     
-    def _sedimentation(self, reference_implementation=False):
+    def _sedimentation(self):
         """Calculated sediment top and base and sedimentation rate through time
         """
         sed_pack = self.current_node.sediments
@@ -813,119 +813,94 @@ class Forward_model:
                                 self._parameters.time_start]
         sed_lay = sed_pack.shape[0]
         sed = np.zeros((sed_lay, 2, ntime))
+        sed_max_burial = np.zeros((sed_lay, ntime))
         # 2D array col = sed_pack, row = age/time
         sedrate = np.zeros((ntime, sed_lay))
-        if not reference_implementation: # Vectorized compaction including erosion.
-            # Dataframe access by name in the inner loop is very slow, we extract
-            # the relevant data to numpy arrays to avoid this.
-            baseage = sed_pack['baseage'][:sed_lay].to_numpy()
-            topage = sed_pack['topage'][:sed_lay].to_numpy()
-            grain_thickness = sed_pack['grain_thickness'][:sed_lay].to_numpy()
-            have_erosion = np.any(grain_thickness<0)
-            phi = sed_pack['phi'][:sed_lay].to_numpy()
-            decay = sed_pack['decay'][:sed_lay].to_numpy()
-            # Vectorized inner loop (over layers)
-            for i in itime:
-                seddep = np.zeros(sed_lay)
-                # Assume that layer are stored in increasing age order
-                # We have a number of already deposited layers and
-                # maybe one layer which is in the middle of deposition.
-                # Already deposited means i < topage
-                # Started means i > baseage
+        # Vectorized compaction including erosion.
+        # Dataframe access by name in the inner loop is very slow, we extract
+        # the relevant data to numpy arrays to avoid this.
+        baseage = sed_pack['baseage'][:sed_lay].to_numpy()
+        topage = sed_pack['topage'][:sed_lay].to_numpy()
+        grain_thickness = sed_pack['grain_thickness'][:sed_lay].to_numpy()
+        eroded_grain_thickness = sed_pack['eroded_grain_thickness'][:sed_lay].to_numpy()
+        paleo_total_grain_thickness = grain_thickness + eroded_grain_thickness
+        erosion_duration = sed_pack['erosion_duration'][:sed_lay].to_numpy()
+        have_erosion = np.any(eroded_grain_thickness>0)
+        if have_erosion:
+            maximum_burial_depth = np.zeros(sed_lay)
+        else:
+            maximum_burial_depth = None
+        phi = sed_pack['phi'][:sed_lay].to_numpy()
+        decay = sed_pack['decay'][:sed_lay].to_numpy()
+        # Vectorized inner loop (over layers)
+        for i in itime:
+            seddep = np.zeros(sed_lay) # layer grain thickness at this time step
+            # Assume that layer are stored in increasing age order
+            # We have a number of already deposited layers and
+            # maybe one layer which is in the middle of deposition.
+            # Already deposited means i < topage
+            # Started means i > baseage
+            deposited_start = np.argmax(i < topage)
+            if topage[deposited_start] >= i:
+                # get already deposited
+                seddep[deposited_start:] = grain_thickness[deposited_start:]
+            else:
+                deposited_start = 10000000
 
-                deposited_start = np.argmax(i < topage)
-                if topage[deposited_start] >= i:
-                    seddep[deposited_start:] = grain_thickness[deposited_start:]
+            # Active layer
+            active_index = np.argmax(i < baseage) # active layer index
+            if baseage[active_index] > i and active_index < deposited_start:
+                layer_total_duration = np.abs(baseage[active_index] - topage[active_index])
+                deposition_duration = layer_total_duration - erosion_duration[active_index]
+                layer_has_erosion = (eroded_grain_thickness[active_index] > 0)
+                erosion_start_age = topage[active_index] + erosion_duration[active_index]
+                erosion_started = (i < erosion_start_age)
+                if layer_total_duration > 0 and erosion_started == False:
+                    sedrate[i,active_index] = paleo_total_grain_thickness[active_index]/deposition_duration 
+                elif layer_total_duration > 0 and erosion_started and layer_has_erosion:
+                    sedrate[i,active_index] = eroded_grain_thickness[active_index]/erosion_duration[active_index] *-1
+                if layer_has_erosion:
+                    #print(erosion_start_age,erosion_started,i,deposition_duration)
+                    sed_rate_before_erosion_starts = paleo_total_grain_thickness[active_index]/deposition_duration
+                    sed_rate_during_erosion = eroded_grain_thickness[active_index]/erosion_duration[active_index] *-1
+                    s_e = sed_rate_during_erosion *sedrate[i:erosion_start_age].size
+                    s_f =  sed_rate_before_erosion_starts *sedrate[erosion_start_age:baseage[active_index]].size
+                    total_size = sedrate[i:erosion_start_age].size +sedrate[erosion_start_age:baseage[active_index]].size
+                    mean_sed = (s_e+s_f)/total_size
+                    seddep[active_index] = mean_sed*(baseage[active_index] - i)
+                    #print(seddep[active_index],sedrate[i,active_index],i)
                 else:
-                    deposited_start = 10000000
-                # Active layer
-                active_index = np.argmax(i < baseage)
-                if baseage[active_index] > i and active_index < deposited_start:
-                    duration = np.abs(baseage[active_index] - topage[active_index])
-                    if duration > 0:
-                        sedrate[i,active_index] = grain_thickness[active_index]/duration   
                     seddep[active_index] = sedrate[i,active_index]*(baseage[active_index] - i)
-                # Erode (if negative values in seddep)
-                if have_erosion:
-                    for j in range(active_index,0,-1):
-                        if seddep[j] < 0:
-                            seddep[j-1] += seddep[j]
-                            seddep[j] = 0
-                    if seddep[0] < 0:
-                        seddep[0] = 0
-                    if i == itime[0]:
-                        maximum_burial_depth = np.zeros_like(seddep)
-                    else:
-                        maximum_burial_depth = np.maximum(maximum_burial_depth, sed[active_index:, 1, i-1])
-                else:
-                    maximum_burial_depth = None
-
-                # Compact
-                if baseage[active_index] > i: # We have at least one layer
-                    layer_thickness = self._compact_many_layers(seddep[active_index:],
-                                                                phi[active_index:],
-                                                                decay[active_index:],
-                                                                maximum_burial_depth=maximum_burial_depth[active_index:] if maximum_burial_depth is not None else None)
-                    z = np.cumsum(layer_thickness)
-                    sed[active_index+1:, 0, i] = z[:-1] # top depth
-                    sed[active_index:, 1, i] = z # bottom depth
-        # for rows in cont_pts: #row is 1d locations
-        else: # if reference_implementation: Note: does not support erosion!
-            for i in itime:  # time is reversed
-                for x in range(sed_lay):  # skip basement
-                    sed_layer_properties = sed_pack.iloc[x]
-                    # Move seddep calculation to outside the compaction loop
-                    if i < sed_layer_properties.baseage and i >= sed_layer_properties.topage: # depositing, slice sedimentary package
-                        deposition_duration = abs(
-                            sed_layer_properties.baseage - sed_layer_properties.topage
-                        )
-                        if deposition_duration == 0:
-                            sedrate[i, x] = 0
-                            seddep = 0
-                        else:
-                            sedrate[i, x] = sed_layer_properties.grain_thickness / \
-                                deposition_duration
-                            seddep = sedrate[i, x] * \
-                                (sed_layer_properties.baseage - i)
-                    elif i < sed_layer_properties.topage:  # already deposited
-                        seddep = sed_layer_properties.grain_thickness
-                    else:  # future sediments
-                        seddep = 0
-                    if seddep > 0:  # set sed
-                        y1 = sed[x, 0, i]  # top
-                        check = True
-                        y2 = seddep
-                        while check == True:
-                            if sed_layer_properties.phi > 0:
-                                average_porosity = (
-                                    sed_layer_properties.phi
-                                    / sed_layer_properties.decay
-                                    / (y2 - y1)
-                                    * (
-                                        math.exp(
-                                            (-1 * sed_layer_properties.decay * y1))
-                                        - math.exp((-1 * sed_layer_properties.decay * y2))
-                                    )
-                                )
-                            else:
-                                average_porosity = sed_layer_properties.phi
-                            y2_new = y1 + seddep / (1 - average_porosity)
-                            if abs((y2 - y2_new)) <= 1e-6:
-                                check = False
-                                sed[x, 1, i] = y2
-                                if x + 1 < sed_lay:
-                                    sed[x + 1, 0, i] = y2
-                            y2 = y2_new
-                    else:
-                        sed[x, 1, i] = sed[x, 0, i]  # base = top
-                        if x + 1 < sed_lay:
-                            sed[x + 1, 0, i] = sed[x, 0, i]
+            
+            # Erode (if negative values in seddep)
+            if have_erosion:
+                for j in range(active_index,0,-1):
+                    if seddep[j] < 0:
+                        seddep[j-1] += seddep[j]
+                        seddep[j] = 0
+                if seddep[0] < 0:
+                    seddep[0] = 0
+                maximum_burial_depth = np.maximum(maximum_burial_depth, sed[:, 1, i-1])
+            if layer_has_erosion:
+                print(maximum_burial_depth)
+            # Compact
+            if baseage[active_index] > i: # We have at least one layer
+                layer_thickness = self._compact_many_layers(seddep[active_index:],
+                                                            phi[active_index:],
+                                                            decay[active_index:],
+                                                            maximum_burial_depth=maximum_burial_depth[active_index:] if maximum_burial_depth is not None else None)
+                z = np.cumsum(layer_thickness)
+                sed[active_index+1:, 0, i] = z[:-1] # base of this layer is top of next layer
+                sed[active_index:, 1, i] = z 
+            if have_erosion:
+                sed_max_burial[:,i]= maximum_burial_depth
+    # for rows in cont_pts: #row is 1d locations
+        self.current_node.maximum_burial_depth = sed_max_burial
         self.current_node.sed = sed * 1000
         self.current_node.sedrate = sedrate * 1000
         return
     
-    @staticmethod
-    def compaction(top_m: float, base_m: float, phi0: float, phi_decay: float, base_maximum_burial_depth_m: float = 0) -> float:
+    def compaction(self,top_m: float, base_m: float, phi0: float, phi_decay: float,  sed_id:int, base_maximum_burial_depth_m: float = 0) -> float:
         """Compact sediment at depth
 
         Parameters
@@ -1046,7 +1021,7 @@ class Forward_model:
         """
 
         sedflag = True
-        if np.sum(sedrate) > 0:  # new sediment exist
+        if np.any(sedrate != 0):  # new sediment/erosion exist
             xsed, Tsed, HPsed, idsed = self._combine_new_old_sediments(
                 sedrate,
                 sed,
@@ -1108,20 +1083,50 @@ class Forward_model:
             Sediment ids between xsed
         """
         # Get new sediments at this time step
+
+        assert sedrate[sedrate!=0].size == 1 #only one layer can have sedimentation at one timestep
+
         xsed_new, idsed_new = self._get_new_sediments(
             sedrate, self.current_node.sediments["phi"].values, self.current_node.sediments["decay"].values)
         HPsed_new = self.current_node.sediments["rhp"].values[idsed_new]
-
-        # decompact and recompat old_sed for new depth
+        if sedrate[sedrate!=0][0] < 0 and xsed_old.size > 1: # negative sedrate at this step and has old sediment
+            #erosion
+            pass
+        # decompact and recompact old_sed for new depth
         if xsed_old[-1] > 0:  # old sediments exist
             new_sed_base = xsed_new[-1]
-            xsed_old_recompacted = self._recompact_old_sediments(
-                new_sed_base, xsed_old,  idsed_old, self.current_node.sediments[
-                    "phi"].values, self.current_node.sediments["decay"].values
-            )
-            xsed = np.append(xsed_new, xsed_old_recompacted)
-            idsed = np.append(idsed_new, idsed_old)
-            HPsed = np.append(HPsed_new, HPsed_old)
+            ## skip recompact if erosion or before going deeper that previous
+            if sedrate[sedrate!=0][0] > 0:
+                xsed_old_recompacted = self._recompact_old_sediments(
+                    new_sed_base, xsed_old,  idsed_old, self.current_node.sediments[
+                        "phi"].values, self.current_node.sediments["decay"].values
+                )
+                xsed = np.append(xsed_new, xsed_old_recompacted)
+                idsed = np.append(idsed_new, idsed_old)
+                HPsed = np.append(HPsed_new, HPsed_old)
+            elif sedrate[sedrate!=0][0] < 0:
+                # remove old sediments # no decompaction
+                sed_id = np.argwhere(sedrate < 0).flatten()[0]
+                sedrate_this_time = sedrate[sedrate!=0][0]
+                eroded_thickness = self.decompaction(0,sedrate_this_time*-1,self.current_node.sediments[
+                        "phi"].values[sed_id] ,self.current_node.sediments["decay"].values[sed_id])
+                if xsed_old[1] > eroded_thickness: #just reduce thickness in top layer
+                    xsed_old_recompacted = xsed_old -eroded_thickness
+                    xsed_old_recompacted[0] = 0
+                else: # remove layer
+                    chk = np.argwhere(xsed_old <= eroded_thickness).flatten()
+                    n_node_to_delete = chk[-1]
+                    thickness_to_delete = eroded_thickness-xsed_old[n_node_to_delete]
+                    xsed_old_recompacted = xsed_old[1:]-thickness_to_delete
+                    xsed_old_recompacted[0]=0
+                    HPsed_old = HPsed_old[n_node_to_delete:]
+                    idsed_old = idsed_old[n_node_to_delete:]
+                    Tsed_old = Tsed_old[n_node_to_delete:]
+                # print(xsed_old_recompacted[-1], xsed_old[-1])
+                    
+                xsed = xsed_old_recompacted
+                HPsed = HPsed_old
+                idsed = idsed_old
         else:
             xsed = xsed_new
             HPsed = HPsed_new
@@ -1130,12 +1135,13 @@ class Forward_model:
         Tsed = np.append(Tsed, Tsed_old)
 
         # refine sediments mesh
-        if xsed.size > 3:
-            xsed_remeshed, idsed, HPsed = self._remesh_sediments(
-                xsed, idsed, HPsed, self.current_node.sediments["rhp"].values, sed)
-            Tsed = np.interp(xsed_remeshed, xsed, Tsed)
-            xsed = xsed_remeshed
-
+        # if xsed.size > 3:
+        #     print('before',xsed[-1])
+        #     xsed_remeshed, idsed, HPsed = self._remesh_sediments(
+        #         xsed, idsed, HPsed, self.current_node.sediments["rhp"].values, sed)
+        #     Tsed = np.interp(xsed_remeshed, xsed, Tsed)
+        #     xsed = xsed_remeshed
+        # print("remesh",xsed[-1])
         return xsed, Tsed, HPsed, idsed
     
     def _recompact_old_sediments(
@@ -1172,7 +1178,7 @@ class Forward_model:
             grain_thickness_m = self.decompaction( # Fix for maximum burial
                 xsed_old[i]+shift, xsed_old[i + 1]+shift, phi0, sed_decay[sed_idx])
             xsed_old_recompacted[i] = self.compaction(
-                previous_base, grain_thickness_m, phi0, sed_decay[sed_idx], base_maximum_burial_depth_m=maximum_burial)
+                previous_base, grain_thickness_m, phi0, sed_decay[sed_idx], sed_idx,base_maximum_burial_depth_m=maximum_burial)
             previous_base = xsed_old_recompacted[i]
         return xsed_old_recompacted
 
@@ -1201,13 +1207,13 @@ class Forward_model:
             if (
                 sedrate[i] > 0
             ):  # sedrate filtered to time in input. sedrate is now 1d array
+                # should only be one loop
                 new_sediment_depth = self.compaction(
-                    xsed_new[-1], sedrate[i], sed_phi0[i], sed_decay[i])
+                    xsed_new[-1], sedrate[i], sed_phi0[i], sed_decay[i], i)
                 xsed_new = np.append(xsed_new, new_sediment_depth)
                 idsed_new = np.append(idsed_new, i)
         return xsed_new, idsed_new
 
-    #TODO: ulf speedup
     def _remesh_sediments(self, xsed: np.ndarray[np.float64], idsed: np.ndarray[np.int32], HPsed: np.ndarray[np.float64], sed_rhp: np.ndarray[np.float64], sed: np.ndarray[np.float64]) -> tuple[np.ndarray[np.float64], np.ndarray[np.int32], np.ndarray[np.float64]]:
         """Remesh sedimentary column to maintain resolution
 
@@ -1245,6 +1251,7 @@ class Forward_model:
                 xsed_remeshed = np.append(xsed_remeshed, x_interp[1:]) # todo: ulf: append is slow, build list and concatenate at the end
                 id_temp = i * np.ones(n_new_nodes + 1, np.int32)
                 idsed_remeshed = np.append(idsed_remeshed, id_temp)
+                #print([idsed[0]],idsed_remeshed)
                 HPsed_remeshed = np.append(
                     HPsed_remeshed, (sed_rhp[i] * np.ones(n_new_nodes + 1)))
         return xsed_remeshed, idsed_remeshed, HPsed_remeshed

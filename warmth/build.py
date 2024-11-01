@@ -231,6 +231,8 @@ class single_node:
             df['erosion'] = 0
         if 'erosion_duration' not in df:
             df['erosion_duration'] = 0
+        df['erosion'] = df['erosion'].fillna(0)
+        df['erosion_duration'] = df['erosion_duration'].fillna(0)
         base = df["top"].values[1:]
         top = df["top"].values[:-1]
 

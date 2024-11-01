@@ -25,6 +25,10 @@ class Results:
         layerId: np.ndarray[np.int32]
         values:np.ndarray[np.float64]
 
+    @property
+    def ages(self)-> np.ndarray:
+        return np.arange(self._depth.shape[1])
+    
     def top_crust(self,age:int)->float:
         """Depth of crust
 

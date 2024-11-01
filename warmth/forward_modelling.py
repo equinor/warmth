@@ -860,7 +860,6 @@ class Forward_model:
                 elif layer_total_duration > 0 and erosion_started and layer_has_erosion:
                     sedrate[i,active_index] = eroded_grain_thickness[active_index]/erosion_duration[active_index] *-1
                 if layer_has_erosion:
-                    #print(erosion_start_age,erosion_started,i,deposition_duration)
                     sed_rate_before_erosion_starts = paleo_total_grain_thickness[active_index]/deposition_duration
                     sed_rate_during_erosion = eroded_grain_thickness[active_index]/erosion_duration[active_index] *-1
                     s_e = sed_rate_during_erosion *sedrate[i:erosion_start_age].size
@@ -868,7 +867,6 @@ class Forward_model:
                     total_size = sedrate[i:erosion_start_age].size +sedrate[erosion_start_age:baseage[active_index]].size
                     mean_sed = (s_e+s_f)/total_size
                     seddep[active_index] = mean_sed*(baseage[active_index] - i)
-                    #print(seddep[active_index],sedrate[i,active_index],i)
                 else:
                     seddep[active_index] = sedrate[i,active_index]*(baseage[active_index] - i)
             
@@ -881,8 +879,6 @@ class Forward_model:
                 if seddep[0] < 0:
                     seddep[0] = 0
                 maximum_burial_depth = np.maximum(maximum_burial_depth, sed[:, 1, i-1])
-            if layer_has_erosion:
-                print(maximum_burial_depth)
             # Compact
             if baseage[active_index] > i: # We have at least one layer
                 layer_thickness = self._compact_many_layers(seddep[active_index:],
@@ -899,6 +895,39 @@ class Forward_model:
         self.current_node.sed = sed * 1000
         self.current_node.sedrate = sedrate * 1000
         return
+    
+    def get_sediments(self, time:int, Tsed_old: np.ndarray):
+        #xsed = np.append(self.current_node.sed[:,:,time][:,0], self.current_node.sed[:,:,time][-1,-1])
+        idsed = np.argwhere(self.current_node.sed[:,:,time][:,-1] >0).flatten()
+        HPsed = self.current_node.sediments["rhp"].values[idsed]
+        seabed_idx = np.argwhere(self.current_node.sed[:,:,time][:,0] == 0).flatten()[-1]
+        if np.sum(self.current_node.sed[:,:,time]) == 0: # no sediment for all layers at this time step
+            xsed = self.current_node.sed[:,:,time][seabed_idx:,0]
+        else:
+            xsed = np.append(self.current_node.sed[:,:,time][seabed_idx:,0], self.current_node.sed[:,:,time][-1,-1])
+        # remove hiatus layer
+        idsed = np.argwhere(self.current_node.sed[:,:,time][:,-1] >0).flatten()
+        
+        # layers with no thickness
+        hiatus_layers = np.argwhere((self.current_node.sed[:,:,time][:,1]-self.current_node.sed[:,:,time][:,0]==0) & (self.current_node.sed[:,:,time][:,1]!=0)).flatten()
+        if hiatus_layers.size > 0:
+            xsed = np.unique(xsed)
+            indx = np.ravel([np.where(idsed == i) for i in hiatus_layers])
+            idsed = np.delete(idsed, indx)
+        #####
+        HPsed = self.current_node.sediments["rhp"].values[idsed]
+        if Tsed_old.size < xsed.size: # new layer added
+            Tsed = np.append(np.zeros(xsed.size-Tsed_old.size), Tsed_old)
+        else:
+            Tsed = Tsed_old
+            active_layer = np.argwhere((self.current_node.sediments['baseage'].values >time)).flatten()[0]
+            if self.current_node.sedrate[time,active_layer] > 0: # has new sediment but no new layer
+                Tsed[0] = 0 # set new sediment to 0 degree. Solver will set top boundary condition to 5
+        sedflag = xsed.size > 1
+        assert xsed.size == Tsed.size
+        assert xsed.size -1 == HPsed.size
+        assert HPsed.size == idsed.size
+        return sedflag, xsed, Tsed, HPsed, idsed
     
     def compaction(self,top_m: float, base_m: float, phi0: float, phi_decay: float,  sed_id:int, base_maximum_burial_depth_m: float = 0) -> float:
         """Compact sediment at depth
@@ -1121,9 +1150,7 @@ class Forward_model:
                     xsed_old_recompacted[0]=0
                     HPsed_old = HPsed_old[n_node_to_delete:]
                     idsed_old = idsed_old[n_node_to_delete:]
-                    Tsed_old = Tsed_old[n_node_to_delete:]
-                # print(xsed_old_recompacted[-1], xsed_old[-1])
-                    
+                    Tsed_old = Tsed_old[n_node_to_delete:]                    
                 xsed = xsed_old_recompacted
                 HPsed = HPsed_old
                 idsed = idsed_old
@@ -1335,14 +1362,15 @@ class Forward_model:
                 #     print("Lith", i, hLith, lithUpdated)
 
                 # Take care of sedimentation
-                sedflag, xsed, Tsed, HPsed, idsed = self.add_sediments(
-                    self.current_node.sedrate[i, :],
-                    self.current_node.sed[:, :, i],
-                    xsed,
-                    Tsed,
-                    HPsed,
-                    idsed,
-                )
+                # sedflag, xsed, Tsed, HPsed, idsed = self.add_sediments(
+                #     self.current_node.sedrate[i, :],
+                #     self.current_node.sed[:, :, i],
+                #     xsed,
+                #     Tsed,
+                #     HPsed,
+                #     idsed,
+                # )
+                sedflag, xsed, Tsed, HPsed, idsed = self.get_sediments(i, Tsed)
                 (
                     T_newtemp,
                     densityeff_crust_lith,
@@ -1363,7 +1391,6 @@ class Forward_model:
                     HPsed,
                     idsed,
                 )
-
                 # Interpolate temperature back to original coord
                 T_new = np.interp(coord_start_this_rift,
                                   coord_current, T_newtemp)
@@ -1605,6 +1632,7 @@ class Forward_model:
             coord_all = coord_crust_lith
             T_all = t_old
             HP_all = HP
+
         mean_porosity_arr, sed_idx_arr = self._sediments_mean_porosity(
             xsed,  idsed)
         # if (self.current_node.X==12150) and (self.current_node.Y==12000):

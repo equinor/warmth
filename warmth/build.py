@@ -112,6 +112,24 @@ class single_node:
         self.top_crust_arr:np.ndarray[np.float64]|None=None
         self.top_lith_arr:np.ndarray[np.float64]|None=None
         self.top_aest_arr:np.ndarray[np.float64]|None=None
+        self.has_salt = False
+        self.salt_layer_id: list[int] = []
+        self.salt_thickness = [[]]
+
+
+    def parse_salt(self):
+        if self.has_salt is False:
+            raise Exception("No salt input")
+        for idx, thickness in enumerate(self.salt_thickness):
+            valid_vals = np.argwhere(~np.isnan(thickness)).flatten()
+            salt_thickness_has_val = thickness[valid_vals]
+            interp_length = valid_vals[-1]-valid_vals[0]
+            new_data_idx = np.linspace(valid_vals[0], valid_vals[1], interp_length+1)
+            self.salt_thickness[idx][valid_vals[0]:valid_vals[-1]+1] = np.interp(new_data_idx,valid_vals,salt_thickness_has_val)
+            # no salt movement before sedimentation of salt compeletes. set to nan
+            salt_end_deposition_age = self.sediments.iloc[self.salt_layer_id[idx]]["topage"]
+            self.salt_thickness[idx][salt_end_deposition_age+1:]=np.nan
+        return
 
     @property
     def shf(self)->float:

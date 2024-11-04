@@ -776,7 +776,14 @@ class Forward_model:
         n_sed_elem = top_km_arr.size
         mean_porosity = np.zeros(n_sed_elem)
         sed_id = sed_id[np.arange(n_sed_elem)]
-        mean_porosity = -sed_phi0[sed_id] / sed_decay[sed_id] * self._phi1(base_km_arr, top_km_arr, -sed_decay[sed_id])
+        with np.errstate(divide='ignore', invalid='ignore'): # allow nan return from division by zero
+            mean_porosity = -sed_phi0[sed_id] / sed_decay[sed_id] * self._phi1(base_km_arr, top_km_arr, -sed_decay[sed_id])
+        nan_val = np.argwhere(np.isnan(mean_porosity)).flatten()
+        for idx in nan_val: # fix for salt where there is no compaction. clean up division by zero
+            if sed_decay[sed_id[idx]] == 0:
+                mean_porosity[idx] = sed_phi0[sed_id[idx]]
+            else:
+                mean_porosity[idx] = 0
         return mean_porosity, sed_id
 
 
@@ -822,6 +829,11 @@ class Forward_model:
         baseage = sed_pack['baseage'][:sed_lay].to_numpy()
         topage = sed_pack['topage'][:sed_lay].to_numpy()
         grain_thickness = sed_pack['grain_thickness'][:sed_lay].to_numpy()
+        have_salt = self.current_node.has_salt
+        if have_salt:
+            # set depositional thickness of salt
+            for idx, sed_id in enumerate(self.current_node.salt_layer_id):
+                grain_thickness[sed_id] = self.current_node.salt_thickness[idx][~np.isnan(self.current_node.salt_thickness[idx])][-1]/1000
         eroded_grain_thickness = sed_pack['eroded_grain_thickness'][:sed_lay].to_numpy()
         paleo_total_grain_thickness = grain_thickness + eroded_grain_thickness
         erosion_duration = sed_pack['erosion_duration'][:sed_lay].to_numpy()
@@ -833,7 +845,7 @@ class Forward_model:
         phi = sed_pack['phi'][:sed_lay].to_numpy()
         decay = sed_pack['decay'][:sed_lay].to_numpy()
         # Vectorized inner loop (over layers)
-        for i in itime:
+        for i in reversed(itime):
             seddep = np.zeros(sed_lay) # layer grain thickness at this time step
             # Assume that layer are stored in increasing age order
             # We have a number of already deposited layers and
@@ -869,7 +881,6 @@ class Forward_model:
                     seddep[active_index] = mean_sed*(baseage[active_index] - i)
                 else:
                     seddep[active_index] = sedrate[i,active_index]*(baseage[active_index] - i)
-            
             # Erode (if negative values in seddep)
             if have_erosion:
                 for j in range(active_index,0,-1):
@@ -878,7 +889,13 @@ class Forward_model:
                         seddep[j] = 0
                 if seddep[0] < 0:
                     seddep[0] = 0
-                maximum_burial_depth = np.maximum(maximum_burial_depth, sed[:, 1, i-1])
+                maximum_burial_depth = np.maximum(maximum_burial_depth, sed[:, 0, i+1])
+            if have_salt:
+                for idx, sed_id in enumerate(self.current_node.salt_layer_id):
+                    salt_thickness = self.current_node.salt_thickness[idx][i]
+                    if np.isnan(salt_thickness):
+                        continue
+                    seddep[sed_id] =salt_thickness/1000
             # Compact
             if baseage[active_index] > i: # We have at least one layer
                 layer_thickness = self._compact_many_layers(seddep[active_index:],
@@ -1163,12 +1180,10 @@ class Forward_model:
 
         # refine sediments mesh
         # if xsed.size > 3:
-        #     print('before',xsed[-1])
         #     xsed_remeshed, idsed, HPsed = self._remesh_sediments(
         #         xsed, idsed, HPsed, self.current_node.sediments["rhp"].values, sed)
         #     Tsed = np.interp(xsed_remeshed, xsed, Tsed)
         #     xsed = xsed_remeshed
-        # print("remesh",xsed[-1])
         return xsed, Tsed, HPsed, idsed
     
     def _recompact_old_sediments(
@@ -1278,7 +1293,6 @@ class Forward_model:
                 xsed_remeshed = np.append(xsed_remeshed, x_interp[1:]) # todo: ulf: append is slow, build list and concatenate at the end
                 id_temp = i * np.ones(n_new_nodes + 1, np.int32)
                 idsed_remeshed = np.append(idsed_remeshed, id_temp)
-                #print([idsed[0]],idsed_remeshed)
                 HPsed_remeshed = np.append(
                     HPsed_remeshed, (sed_rhp[i] * np.ones(n_new_nodes + 1)))
         return xsed_remeshed, idsed_remeshed, HPsed_remeshed
@@ -1358,8 +1372,6 @@ class Forward_model:
                 T_new = np.interp(coord_current, coord_start_this_rift, T_new)
 
                 # TODO: underplate, asthenospheric anamaly, melt for all modes
-                # if (self.current_node.X==12150) and (self.current_node.Y==12000):
-                #     print("Lith", i, hLith, lithUpdated)
 
                 # Take care of sedimentation
                 # sedflag, xsed, Tsed, HPsed, idsed = self.add_sediments(
@@ -1635,8 +1647,6 @@ class Forward_model:
 
         mean_porosity_arr, sed_idx_arr = self._sediments_mean_porosity(
             xsed,  idsed)
-        # if (self.current_node.X==12150) and (self.current_node.Y==12000):
-        #     print("Lith", i, hLith, lithUpdated)
         
         density_sed = self.sediment_density(
             mean_porosity_arr, self.current_node.sediments["solidus"].values[sed_idx_arr])

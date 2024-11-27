@@ -519,7 +519,8 @@ class Builder:
                 "solidus",
                 "liquidus",
                 "erosion",
-                "erosion_duration"
+                "erosion_duration",
+                "strat"
             ]
         )
 

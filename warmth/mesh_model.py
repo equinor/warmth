@@ -9,6 +9,8 @@ from petsc4py import PETSc
 import ufl
 import sys
 import time
+from dataclasses import dataclass
+from typing import List, Literal
 from scipy.interpolate import LinearNDInterpolator
 from progress.bar import Bar
 from warmth.build import single_node, Builder
@@ -29,6 +31,25 @@ def toc(msg=""):
         return delta
     else:
         print ("Toc: start time not set")
+
+@dataclass
+class rddms_upload_data_initial:
+    tti: int
+    poro0_per_cell: np.ndarray[np.float64]
+    decay_per_cell: np.ndarray[np.float64]
+    density_per_cell: np.ndarray[np.float64]
+    cond_per_cell: np.ndarray[np.float64]
+    rhp_per_cell: np.ndarray[np.float64]
+    lid_per_cell: np.ndarray[np.int32]
+    hexa_renumbered: List[List[int]]
+
+@dataclass
+class rddms_upload_data_timestep:
+    tti: int
+    Temp_per_vertex: np.ndarray[np.float64]
+    points_cached: np.ndarray[np.float64]
+    Ro_per_vertex_series: np.ndarray[np.float64]
+
 class UniformNodeGridFixedSizeMeshModel:
     """Manages a 3D heat equation computation using dolfinx
        Input is a uniform x-, y-grid of Nodes solved by 1D-SubsHeat 
@@ -58,6 +79,7 @@ class UniformNodeGridFixedSizeMeshModel:
         self.posarr = []
         self.Tarr = []
         self.time_indices = []
+        self.run_ro = True
 
         # 2 6 6 6
         self.numElemPerSediment = 2
@@ -173,13 +195,48 @@ class UniformNodeGridFixedSizeMeshModel:
             cond_per_cell, rhp_per_cell, lid_per_cell)
         return filename
 
-    # def send_mpi_messages(self):
-    #     comm = MPI.COMM_WORLD
-    #     comm.send(mm2.mesh.topology.index_map(0).local_to_global(list(range(mm2.mesh.geometry.x.shape[0]))) , dest=0, tag=((comm.rank-1)*10)+21)
-    #     comm.send(mm2.mesh_reindex, dest=0, tag=((comm.rank-1)*10)+23)
-    #     comm.send(mm2.mesh_vertices_age, dest=0, tag=((comm.rank-1)*10)+25)
-    #     comm.send(self.posarr, dest=0, tag=( (comm.rank-1)*10)+20)
-    #     comm.send(self.Tarr, dest=0, tag=( (comm.rank-1)*10)+24)
+    def send_mpi_messages_per_timestep(self):
+        comm = MPI.COMM_WORLD
+        print(range(self.mesh.geometry.x.shape[0]), flush=True)
+        print(self.mesh.topology.index_map(0), flush=True)
+        print(self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0]))), flush=True)
+        comm.send(self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0]))) , dest=0, tag=((comm.rank-1)*10)+1021)
+        comm.send(self.mesh_reindex, dest=0, tag=((comm.rank-1)*10)+1023)
+        comm.send(self.mesh_vertices_age, dest=0, tag=((comm.rank-1)*10)+1025)
+        comm.send(self.mesh.geometry.x.copy(), dest=0, tag=( (comm.rank-1)*10)+1020)
+        comm.send(self.uh.x.array[:].copy(), dest=0, tag=( (comm.rank-1)*10)+1024)
+
+    def receive_mpi_messages_per_timestep(self):
+        comm = MPI.COMM_WORLD
+
+        self.sub_posarr_s = [self.mesh.geometry.x.copy()]
+        self.sub_Tarr_s = [self.uh.x.array[:].copy()]
+
+        self.index_map_s = [self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0])))]
+        self.mesh_reindex_s = [self.mesh_reindex]
+        self.mesh_vertices_age_s = [self.mesh_vertices_age]
+
+        for i in range(1,comm.size):
+            self.index_map_s.append(comm.recv(source=i, tag=((i-1)*10)+1021))
+            self.mesh_reindex_s.append(comm.recv(source=i, tag=((i-1)*10)+1023))
+            self.mesh_vertices_age_s.append(comm.recv(source=i, tag=((i-1)*10)+1025))
+            self.sub_posarr_s.append(comm.recv(source=i, tag=((i-1)*10)+1020))
+            self.sub_Tarr_s.append(comm.recv(source=i, tag=((i-1)*10)+1024))
+
+        nv = np.amax(np.array( [np.amax(index_map) for index_map in self.index_map_s ] )) + 1   # no. vertices/nodes
+        # mri = np.arange( nv, dtype=np.int32)
+
+        self.x_original_order_ts = (np.ones( [nv,3], dtype= np.float32) * -1)
+        self.T_per_vertex_ts = (np.ones( nv, dtype= np.float32) * -1)
+        self.age_per_vertex_ts = np.ones( nv, dtype= np.int32) * -1
+
+        for k in range(len(self.mesh_reindex_s)):
+            for ind,val in enumerate(self.mesh_reindex_s[k]):
+                self.x_original_order_ts[val,:] = self.sub_posarr_s[k][ind,:] 
+                self.T_per_vertex_ts[val] = self.sub_Tarr_s[k][ind]
+                self.age_per_vertex_ts[val] = self.mesh_vertices_age_s[k][ind]
+        print(f"receive_mpi_messages_per_timestep {comm.rank}, {self.x_original_order_ts.shape} {self.T_per_vertex_ts.shape}")
+        pass
 
     def receive_mpi_messages(self):
         comm = MPI.COMM_WORLD
@@ -296,6 +353,9 @@ class UniformNodeGridFixedSizeMeshModel:
             cond_per_cell, rhp_per_cell, lid_per_cell)
         return filename_hex
 
+
+    def get_resqpy():
+        pass
 
     def write_hexa_mesh_timeseries( self, out_path, run_ro=False):
         """Prepares arrays and calls the RESQML output helper function for hexa meshes:  the lith and aesth are removed, and the remaining
@@ -1259,7 +1319,114 @@ class UniformNodeGridFixedSizeMeshModel:
         self.Tarr.append(self.uh.x.array[:].copy())
         # print("latest Tarr", self.Tarr[-1], np.mean(self.Tarr[-1]))
 
+    def rddms_upload_initial(self, tti):
+        print("PING A", flush=True)
+        logger.info("PINGG A")
+        hexaHedra, hex_data_layerID, hex_data_nodeID = self.buildHexahedra(keep_padding=False)
+        hexa_to_keep = []
+        self.p_to_keep = set()
+        lid_to_keep = []
+        cell_id_to_keep = []
+        print("PING B", flush=True)
+        for i,h in enumerate(hexaHedra):
+            lid0 = hex_data_layerID[i]
+            # 
+            # discard aesth and lith (layer IDs -2, -3)
+            #
+            if (lid0>=-1) and (lid0<100):
+                hexa_to_keep.append(h)
+                lid_to_keep.append(lid0)
+                cell_id_to_keep.append(hex_data_nodeID[i])
+                for hi in h:
+                    self.p_to_keep.add(hi)
+        print("PING C", flush=True)
 
+        poro0_per_cell = np.array( [ self.getSedimentPropForLayerID('phi', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ] )
+        decay_per_cell = np.array( [ self.getSedimentPropForLayerID('decay', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ])
+        density_per_cell = np.array( [ self.getSedimentPropForLayerID('solidus', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ])
+        cond_per_cell = np.array( [ self.getSedimentPropForLayerID('k_cond', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ])
+        rhp_per_cell = np.array( [ self.getSedimentPropForLayerID('rhp', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ])
+        lid_per_cell = np.array(lid_to_keep)
+
+        print("PING D", flush=True)
+        print(f"receive_mpi_messages_per_timestep {self.x_original_order_ts.shape} {self.T_per_vertex_ts.shape}", flush=True)        
+        x_original_order, T_per_vertex = (self.x_original_order_ts, self.T_per_vertex_ts)  # self.get_node_pos_and_temp(tti)
+        print("PING E", flush=True)
+        n_vertices = x_original_order.shape[0]
+        point_original_to_cached = np.full(n_vertices,-1,dtype = np.int32)
+        count = 0
+        print("PING F", flush=True)
+        for i in range(n_vertices):
+            if (i in self.p_to_keep):
+                point_original_to_cached[i]= count
+                count += 1
+        print("PING G", flush=True)
+        hexa_renumbered = [ [point_original_to_cached[i] for i in hexa] for hexa in hexa_to_keep ]
+        print("PING H", flush=True)
+        data = rddms_upload_data_initial(
+            tti,
+            poro0_per_cell,
+            decay_per_cell,
+            density_per_cell,
+            cond_per_cell,
+            rhp_per_cell,
+            lid_per_cell,
+            hexa_renumbered
+        )
+        print("PING G", flush=True)
+        return data
+
+    def rddms_upload_timestep(self, tti, is_final=False):
+        print("PING AA", flush=True)
+        # x_original_order, T_per_vertex = self.get_node_pos_and_temp(tti) # self.time_indices[0])
+        # n_vertices = x_original_order.shape[0]
+        # age_per_vertex_keep = np.array([ self.age_per_vertex[i] for i in range(n_vertices) if i in self.p_to_keep ])
+        Temp_per_vertex_series = np.empty([len(self.time_indices), len(self.p_to_keep)])
+        points_cached_series = np.empty([len(self.time_indices), len(self.p_to_keep),3])
+        Ro_per_vertex_series = None
+        Temp_per_vertex = np.empty([len(self.p_to_keep)])
+        points_cached = np.empty([len(self.p_to_keep),3])
+        Ro_per_vertex = None
+        Ro_per_vertex = np.empty([len(self.p_to_keep)])
+
+        print("PING BB", flush=True)
+        x_original_order, T_per_vertex = x_original_order, T_per_vertex = (self.x_original_order_ts, self.T_per_vertex_ts) # self.get_node_pos_and_temp(tti)
+        n_vertices = x_original_order.shape[0]            
+        T_per_vertex_filt = [ T_per_vertex[i] for i in range(n_vertices) if i in self.p_to_keep  ]
+        Temp_per_vertex[:] = T_per_vertex_filt
+        print("PING CC", flush=True)
+
+        count = 0
+        for i in range(n_vertices):
+            if (i in self.p_to_keep):
+                points_cached[count,:] = x_original_order[i,:]
+                count += 1
+        Ro_per_vertex_series = None
+        if is_final and self.run_ro:            
+            for idx, tti in enumerate(self.time_indices): # oldest first
+                if idx > 0:
+                    x_original_order, T_per_vertex = self.get_node_pos_and_temp(tti)
+                T_per_vertex_filt = [ T_per_vertex[i] for i in range(n_vertices) if i in self.p_to_keep  ]
+                Temp_per_vertex_series[idx,:] = T_per_vertex_filt
+
+            # if self.run_ro:
+            s = time.time()
+            logger.debug("Calculating vitrinite reflectance EasyRo%DL")
+            Ro_per_vertex_series = np.empty([len(self.time_indices), len(self.p_to_keep)])
+            # Ro_per_vertex = np.empty([len(self.p_to_keep)])
+            for i in range(Temp_per_vertex_series.shape[1]):
+                ts = Temp_per_vertex_series[:,i]
+                ro = VR.easyRoDL(ts)
+                Ro_per_vertex_series[:,i] = ro.flatten()
+            logger.debug(f"VR calculation {time.time()-s}s")
+        # filename_hex = path.join(out_path, self.modelName+'_hexa_ts_'+str(self.tti)+'.epc')
+        data = rddms_upload_data_timestep(
+            tti,
+            Temp_per_vertex,
+            points_cached,
+            Ro_per_vertex_series
+        )
+        return data
 
 
     #
@@ -1579,6 +1746,8 @@ def global_except_hook(exctype, value, traceback):
 
 sys.excepthook = global_except_hook
 
+
+
 def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0, pad_num_nodes=0,
             out_dir = "out-mapA/",sedimentsOnly=False, writeout=True, base_flux=None):
     logger.setLevel(10)  # numeric level equals DEBUG
@@ -1592,6 +1761,7 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
     # base_flux = 0.0033
     writeout_final = True
     time_solve = 0.0
+    upload_rddms = True
     with Bar('Processing...',check_tty=False, max=(start_time-end_time)) as bar:
         for tti in range(start_time, end_time-1,-1): #start from oldest
             rebuild_mesh = (tti==start_time)
@@ -1628,6 +1798,28 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
             
             mms2.append(mm2)
             mms_tti.append(tti)
+            if (upload_rddms):
+                tic()
+                comm.Barrier()
+                if comm.rank>=1:
+                    mm2.send_mpi_messages_per_timestep()
+                if comm.rank==0:
+                    mm2.receive_mpi_messages_per_timestep()
+                comm.Barrier()                    
+                if (tti==start_time):
+                    # initial upload
+                    if comm.rank==0:
+                       data = mm2.rddms_upload_initial(tti)
+                       print(f"rddms_upload_initial {type(data)}")
+                    else:
+                        pass
+                comm.Barrier()                    
+                if comm.rank==0:
+                    data = mm2.rddms_upload_timestep(tti, is_final=(tti==end_time))
+                    print(f"rddms_upload_timestep {type(data)}")
+                comm.Barrier()                    
+                toc(msg="rddms upload during simulation")
+
             bar.next()
     logger.info(f"total time solve 3D: {time_solve}")
     if (writeout_final):

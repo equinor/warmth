@@ -280,7 +280,9 @@ def read_mesh_resqml_hexa(epcfilename, meshTitle = 'hexamesh'):
     titles=[ 'Age', 'LayerID', 'Porosity_initial', 'Porosity_decay', 'Density_solid', 'thermal_conductivity', 'Radiogenic_heat_production']
     titles_uuid = [model.uuid(title = title) for title in titles]
     titles_uuid.append(temp_uuid)
+    
     for prop_uuid in titles_uuid:
+        print(prop_uuid )
         prop = rqp.Property(model, uuid = prop_uuid)
         print(prop.title, prop.indexable_element(), prop.uom(), prop.array_ref()[0:10] )
     
@@ -479,7 +481,22 @@ def write_hexa_grid_with_timeseries(filename, nodes_series, cells, modelTitle = 
        NOTE: writing properties that are defines per-node (have 'nodes' as indexable element) requires a patched version of resqpy!
     """
     logger.info("Creating RESQML model")
-    nodes_time_0 = nodes_series[-1,:,:] # present-day at last index
+
+    model = rq.new_model(filename)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+
+    length_of_nodes_series = nodes_series.shape[0]
+    present_day_nodes = nodes_series[-1,:,:] # present-day at last index
+
+    million_years_offset = 0 
+    times_in_years = [ int(max((t+million_years_offset)*1e6, million_years_offset)) for t in list(range(length_of_nodes_series-1,-1,-1))]
+
+    gts = rts.GeologicTimeSeries.from_year_list(model, times_in_years, title="warmth simulation")
+    gts.create_xml()
+    rts.timeframe_for_time_series_uuid(model, gts.uuid)
+
+    nodes_time_0 = present_day_nodes
     node_count = nodes_time_0.shape[0]
     faces_per_cell = []
     nodes_per_face = []
@@ -511,18 +528,6 @@ def write_hexa_grid_with_timeseries(filename, nodes_series, cells, modelTitle = 
     
     set_cell_count = int(len(faces_per_cell)/6)
     face_count = int(len(nodes_per_face)/4)
-
-
-    model = rq.new_model(filename)
-    crs = rqc.Crs(model)
-    crs.create_xml()
-    # present-day is set as 1 due resqpy
-    million_years_offset = 0 
-    times_in_years = [ int(max((t+million_years_offset)*1e6, million_years_offset)) for t in list(range(nodes_series.shape[0]-1,-1,-1))]
-
-    gts = rts.GeologicTimeSeries.from_year_list(model, times_in_years, title="warmth simulation")
-    gts.create_xml()
-    rts.timeframe_for_time_series_uuid(model, gts.uuid)
 
     # create an empty HexaGrid
     hexa = rug.HexaGrid(model, title = modelTitle)
@@ -595,10 +600,12 @@ def write_hexa_grid_with_timeseries(filename, nodes_series, cells, modelTitle = 
                                                     time_index = time_index,
                                                     indexable_element = 'nodes')
                                                     # points = True)
+        pc.write_hdf5_for_imported_list()
+        pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = gts.uuid)
 
 
-    pc.write_hdf5_for_imported_list()
-    pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = gts.uuid)
+    # pc.write_hdf5_for_imported_list()
+    # pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = gts.uuid)
 
 
     if age_per_vertex is not None:

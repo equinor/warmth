@@ -42,6 +42,7 @@ class rddms_upload_data_initial:
     rhp_per_cell: np.ndarray[np.float64]
     lid_per_cell: np.ndarray[np.int32]
     hexa_renumbered: List[List[int]]
+    geotimes: List[int]
 
 @dataclass
 class rddms_upload_data_timestep:
@@ -1320,14 +1321,11 @@ class UniformNodeGridFixedSizeMeshModel:
         # print("latest Tarr", self.Tarr[-1], np.mean(self.Tarr[-1]))
 
     def rddms_upload_initial(self, tti):
-        print("PING A", flush=True)
-        logger.info("PINGG A")
         hexaHedra, hex_data_layerID, hex_data_nodeID = self.buildHexahedra(keep_padding=False)
         hexa_to_keep = []
         self.p_to_keep = set()
         lid_to_keep = []
         cell_id_to_keep = []
-        print("PING B", flush=True)
         for i,h in enumerate(hexaHedra):
             lid0 = hex_data_layerID[i]
             # 
@@ -1339,7 +1337,6 @@ class UniformNodeGridFixedSizeMeshModel:
                 cell_id_to_keep.append(hex_data_nodeID[i])
                 for hi in h:
                     self.p_to_keep.add(hi)
-        print("PING C", flush=True)
 
         poro0_per_cell = np.array( [ self.getSedimentPropForLayerID('phi', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ] )
         decay_per_cell = np.array( [ self.getSedimentPropForLayerID('decay', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ])
@@ -1348,21 +1345,15 @@ class UniformNodeGridFixedSizeMeshModel:
         rhp_per_cell = np.array( [ self.getSedimentPropForLayerID('rhp', lid,cid) for lid,cid in zip(lid_to_keep,cell_id_to_keep) ])
         lid_per_cell = np.array(lid_to_keep)
 
-        print("PING D", flush=True)
-        print(f"receive_mpi_messages_per_timestep {self.x_original_order_ts.shape} {self.T_per_vertex_ts.shape}", flush=True)        
         x_original_order, T_per_vertex = (self.x_original_order_ts, self.T_per_vertex_ts)  # self.get_node_pos_and_temp(tti)
-        print("PING E", flush=True)
         n_vertices = x_original_order.shape[0]
         point_original_to_cached = np.full(n_vertices,-1,dtype = np.int32)
         count = 0
-        print("PING F", flush=True)
         for i in range(n_vertices):
             if (i in self.p_to_keep):
                 point_original_to_cached[i]= count
                 count += 1
-        print("PING G", flush=True)
         hexa_renumbered = [ [point_original_to_cached[i] for i in hexa] for hexa in hexa_to_keep ]
-        print("PING H", flush=True)
         data = rddms_upload_data_initial(
             tti,
             poro0_per_cell,
@@ -1371,13 +1362,12 @@ class UniformNodeGridFixedSizeMeshModel:
             cond_per_cell,
             rhp_per_cell,
             lid_per_cell,
-            hexa_renumbered
+            hexa_renumbered,
+            []
         )
-        print("PING G", flush=True)
         return data
 
     def rddms_upload_timestep(self, tti, is_final=False):
-        print("PING AA", flush=True)
         # x_original_order, T_per_vertex = self.get_node_pos_and_temp(tti) # self.time_indices[0])
         # n_vertices = x_original_order.shape[0]
         # age_per_vertex_keep = np.array([ self.age_per_vertex[i] for i in range(n_vertices) if i in self.p_to_keep ])
@@ -1389,12 +1379,10 @@ class UniformNodeGridFixedSizeMeshModel:
         Ro_per_vertex = None
         Ro_per_vertex = np.empty([len(self.p_to_keep)])
 
-        print("PING BB", flush=True)
         x_original_order, T_per_vertex = x_original_order, T_per_vertex = (self.x_original_order_ts, self.T_per_vertex_ts) # self.get_node_pos_and_temp(tti)
         n_vertices = x_original_order.shape[0]            
         T_per_vertex_filt = [ T_per_vertex[i] for i in range(n_vertices) if i in self.p_to_keep  ]
         Temp_per_vertex[:] = T_per_vertex_filt
-        print("PING CC", flush=True)
 
         count = 0
         for i in range(n_vertices):
@@ -1749,7 +1737,8 @@ sys.excepthook = global_except_hook
 
 
 def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0, pad_num_nodes=0,
-            out_dir = "out-mapA/",sedimentsOnly=False, writeout=True, base_flux=None):
+            out_dir = "out-mapA/",sedimentsOnly=False, writeout=True, base_flux=None, 
+            callback_fcn_initial=None, callback_fcn_timestep=None):
     logger.setLevel(10)  # numeric level equals DEBUG
     comm = MPI.COMM_WORLD
     builder=interpolate_all_nodes(builder)
@@ -1809,14 +1798,18 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
                 if (tti==start_time):
                     # initial upload
                     if comm.rank==0:
-                       data = mm2.rddms_upload_initial(tti)
-                       print(f"rddms_upload_initial {type(data)}")
+                        data = mm2.rddms_upload_initial(tti)
+                        print(f"rddms_upload_initial {type(data)}")
+                        if (callback_fcn_initial is not None):
+                            callback_fcn_initial(data)
                     else:
                         pass
                 comm.Barrier()                    
                 if comm.rank==0:
                     data = mm2.rddms_upload_timestep(tti, is_final=(tti==end_time))
                     print(f"rddms_upload_timestep {type(data)}")
+                    if (callback_fcn_timestep is not None):
+                        callback_fcn_timestep(data)
                 comm.Barrier()                    
                 toc(msg="rddms upload during simulation")
 

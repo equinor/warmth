@@ -45,11 +45,25 @@ class rddms_upload_data_initial:
     geotimes: List[int]
 
 @dataclass
+class rddms_hexamesh_topology:
+    nodes_per_face: np.ndarray[np.int32]
+    nodes_per_face_cl: np.ndarray[np.int32]
+    faces_per_cell: np.ndarray[np.int32]
+    faces_per_cell_cl: np.ndarray[np.int32]
+    cell_face_is_right_handed: np.ndarray[np.bool8]
+
+@dataclass
 class rddms_upload_data_timestep:
     tti: int
     Temp_per_vertex: np.ndarray[np.float64]
     points_cached: np.ndarray[np.float64]
     Ro_per_vertex_series: np.ndarray[np.float64]
+
+@dataclass
+class rddms_upload_property_initial:
+    prop_title: str
+    continuous: bool
+    indexable_element: str
 
 class UniformNodeGridFixedSizeMeshModel:
     """Manages a 3D heat equation computation using dolfinx
@@ -81,6 +95,8 @@ class UniformNodeGridFixedSizeMeshModel:
         self.Tarr = []
         self.time_indices = []
         self.run_ro = True
+        self.x_original_order_series = []
+        self.T_per_vertex_series = []
 
         # 2 6 6 6
         self.numElemPerSediment = 2
@@ -237,6 +253,8 @@ class UniformNodeGridFixedSizeMeshModel:
                 self.T_per_vertex_ts[val] = self.sub_Tarr_s[k][ind]
                 self.age_per_vertex_ts[val] = self.mesh_vertices_age_s[k][ind]
         print(f"receive_mpi_messages_per_timestep {comm.rank}, {self.x_original_order_ts.shape} {self.T_per_vertex_ts.shape}")
+        self.x_original_order_series.append(self.x_original_order_ts)
+        self.T_per_vertex_series.append(self.T_per_vertex_ts)
         pass
 
     def receive_mpi_messages(self):
@@ -1354,6 +1372,35 @@ class UniformNodeGridFixedSizeMeshModel:
                 point_original_to_cached[i]= count
                 count += 1
         hexa_renumbered = [ [point_original_to_cached[i] for i in hexa] for hexa in hexa_to_keep ]
+
+        faces_per_cell = []
+        nodes_per_face = []
+        faces_dict = {}
+        faces_repeat = np.zeros(n_vertices*100, dtype = bool)
+
+        cell_face_is_right_handed = np.zeros( len(hexa_renumbered)*6, dtype = bool)
+        for ih,hexa in enumerate(hexa_renumbered):
+            faces= [[0,3,2,1], [0,1,5,4], [1,2,6,5], [2,3,7,6], [3,0,4,7], [4,5,6,7]]
+            for iq,quad in enumerate(faces):
+                face0 = [hexa[x] for x in quad ]
+                assert -1 not in face0
+                fkey0 = ( x for x in sorted(face0) )
+                #
+                # keep track of which faces are encountered once vs. more than once
+                # faces that are encountered the second time will need to use the reverse handedness
+                #
+                face_is_repeated = False
+                if (fkey0 not in faces_dict):
+                    faces_dict[fkey0] = len(nodes_per_face)
+                    nodes_per_face.extend(face0)
+                    cell_face_is_right_handed[(ih*6 + iq)] = False
+                else:
+                    face_is_repeated = True
+                    cell_face_is_right_handed[(ih*6 + iq)] = True
+                fidx0 = faces_dict.get(fkey0)            
+                faces_per_cell.append(fidx0/4)
+                faces_repeat[int(fidx0/4)] = face_is_repeated
+
         data = rddms_upload_data_initial(
             tti,
             poro0_per_cell,
@@ -1365,7 +1412,28 @@ class UniformNodeGridFixedSizeMeshModel:
             hexa_renumbered,
             []
         )
+
+        face_count = int(len(nodes_per_face)/3)
+        set_cell_count = int(len(faces_per_cell)/6)
+        nodes_per_face_cl = np.arange(4, 4 * face_count + 1, 4, dtype = int)
+        faces_per_cell_cl = np.arange(6, 6 * set_cell_count + 1, 6, dtype = int)
+        topology = rddms_hexamesh_topology(
+            np.array(nodes_per_face), 
+            nodes_per_face_cl, 
+            np.array(faces_per_cell), 
+            faces_per_cell_cl, 
+            cell_face_is_right_handed
+        )
+        return (data, topology)
+
+    def rddms_properties_initial(self, prop_title, continuous, use_timeseries, tti):
+        data = rddms_upload_property_initial(
+            "points",
+            True,
+            "nodes"
+        )
         return data
+
 
     def rddms_upload_timestep(self, tti, is_final=False):
         # x_original_order, T_per_vertex = self.get_node_pos_and_temp(tti) # self.time_indices[0])
@@ -1390,14 +1458,12 @@ class UniformNodeGridFixedSizeMeshModel:
                 points_cached[count,:] = x_original_order[i,:]
                 count += 1
         Ro_per_vertex_series = None
-        if is_final and self.run_ro:            
-            for idx, tti in enumerate(self.time_indices): # oldest first
+        if is_final and self.run_ro:
+            for idx, tti_x in enumerate(self.time_indices): # oldest first
                 if idx > 0:
-                    x_original_order, T_per_vertex = self.get_node_pos_and_temp(tti)
+                    x_original_order, T_per_vertex = self.get_node_pos_and_temp(tti_x)
                 T_per_vertex_filt = [ T_per_vertex[i] for i in range(n_vertices) if i in self.p_to_keep  ]
                 Temp_per_vertex_series[idx,:] = T_per_vertex_filt
-
-            # if self.run_ro:
             s = time.time()
             logger.debug("Calculating vitrinite reflectance EasyRo%DL")
             Ro_per_vertex_series = np.empty([len(self.time_indices), len(self.p_to_keep)])
@@ -1407,7 +1473,6 @@ class UniformNodeGridFixedSizeMeshModel:
                 ro = VR.easyRoDL(ts)
                 Ro_per_vertex_series[:,i] = ro.flatten()
             logger.debug(f"VR calculation {time.time()-s}s")
-        # filename_hex = path.join(out_path, self.modelName+'_hexa_ts_'+str(self.tti)+'.epc')
         data = rddms_upload_data_timestep(
             tti,
             Temp_per_vertex,
@@ -1798,10 +1863,10 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
                 if (tti==start_time):
                     # initial upload
                     if comm.rank==0:
-                        data = mm2.rddms_upload_initial(tti)
-                        print(f"rddms_upload_initial {type(data)}")
+                        data, topo = mm2.rddms_upload_initial(tti)
+                        print(f"rddms_upload_initial {type(data)} {type(topo)}")
                         if (callback_fcn_initial is not None):
-                            callback_fcn_initial(data)
+                            callback_fcn_initial(data, topo)
                     else:
                         pass
                 comm.Barrier()                    

@@ -320,7 +320,7 @@ class single_node:
 
 
 def load_node(filepath: Path) -> single_node:
-    logger.info(f"Loading node from {filepath}")
+    logger.debug(f"Loading node from {filepath}")
     data = compressed_pickle_open(filepath)
     return data
 
@@ -714,7 +714,7 @@ class Builder:
             ]
             logger.info('Extracting %s sedimentary packages with %s horizons', len(
                 futures), len(futures) + 1)
-            logger.info('Threads:%s', len(poolx._threads))
+            logger.debug('Threads:%s', len(poolx._threads))
 
             # When each job finishes
             for future in concurrent.futures.as_completed(futures):

@@ -141,7 +141,7 @@ def compressed_pickle_open(path: Path):
 
 
 def load_pickle(filepath: Path):
-    logger.info(f"Loading data from {filepath}")
+    logger.debug(f"Loading data from {filepath}")
     with open(filepath, "rb") as f:
         data = pickle.load(f)
     return data

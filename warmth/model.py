@@ -50,7 +50,7 @@ class Model:
         return
 
     def _load_1D_results(self):
-        logger.info(f"Loading model from {self.parameters.out_path}")
+        logger.debug(f"Loading model from {self.parameters.out_path}")
         self._load_nodes()
         return
     

@@ -636,11 +636,11 @@ class UniformNodeGridFixedSizeMeshModel:
         """        
         self.tti = tti
         self.buildVertices(time_index=tti)
-        logger.info("Built vertices")
+        logger.debug("Built vertices")
         self.constructMesh()
-        logger.info("Built mesh")
+        logger.debug("Built mesh")
         self.updateMesh(tti)
-        logger.info("Updated vertices")
+        logger.debug(f"Updated vertices for time {tti}")
      
 
     def updateMesh(self,tti:int, optimized=False):
@@ -750,7 +750,7 @@ class UniformNodeGridFixedSizeMeshModel:
         )
         
         def mpi_print(s):
-            logger.info(f"Rank {comm.rank}: {s}")
+            logger.debug(f"Rank {comm.rank}: {s}")
 
         fn = self.modelName+"_mesh.xdmf"
         if comm.rank==0:

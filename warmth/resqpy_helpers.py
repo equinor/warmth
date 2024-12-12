@@ -478,7 +478,7 @@ def write_hexa_grid_with_timeseries(filename, nodes_series, cells, modelTitle = 
 
        NOTE: writing properties that are defines per-node (have 'nodes' as indexable element) requires a patched version of resqpy!
     """
-    logger.info("Creating RESQML model")
+    logger.debug("Creating RESQML model")
     nodes_time_0 = nodes_series[-1,:,:] # present-day at last index
     node_count = nodes_time_0.shape[0]
     faces_per_cell = []

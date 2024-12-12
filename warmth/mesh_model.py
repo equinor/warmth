@@ -1460,8 +1460,8 @@ class UniformNodeGridFixedSizeMeshModel:
         Ro_per_vertex_series = None
         if is_final and self.run_ro:
             for idx, tti_x in enumerate(self.time_indices): # oldest first
-                if idx > 0:
-                    x_original_order, T_per_vertex = self.get_node_pos_and_temp(tti_x)
+                x_original_order = self.x_original_order_series[idx]
+                T_per_vertex = self.T_per_vertex_series[idx]
                 T_per_vertex_filt = [ T_per_vertex[i] for i in range(n_vertices) if i in self.p_to_keep  ]
                 Temp_per_vertex_series[idx,:] = T_per_vertex_filt
             s = time.time()
@@ -1876,7 +1876,6 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
                     if (callback_fcn_timestep is not None):
                         callback_fcn_timestep(data)
                 comm.Barrier()                    
-                toc(msg="rddms upload during simulation")
 
             bar.next()
     logger.info(f"total time solve 3D: {time_solve}")

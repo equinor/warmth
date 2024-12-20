@@ -437,6 +437,30 @@ class UniformNodeGridFixedSizeMeshModel:
                 ro = VR.easyRoDL(ts)
                 Ro_per_vertex_series[:,i] = ro.flatten()
             logger.debug(f"VR calculation {time.time()-s}s")
+            Ro_per_vertex_series_copy = Ro_per_vertex_series.copy()
+
+            p = []
+            Ro_per_vertex_series = np.empty([len(self.time_indices), len(p_to_keep)])
+            print(f"Begin multithreaded VO")
+            s = time.time()
+            from mpi4py.futures import MPIPoolExecutor
+            import concurrent.futures
+            print(f"Begin multithreaded VO")
+            with MPIPoolExecutor(max_workers=10) as th:
+                futures = [th.submit(VR.easyRoDL, Temp_per_vertex_series[:,i]) for i in range(Temp_per_vertex_series.shape[1])]
+                print(f"futures {len(futures)} {type(futures[0])}")
+                p = concurrent.futures.wait(futures)
+                print(f"p {len(p)} {type(p[0])}")
+                for i,f in enumerate(futures):
+                    Ro_per_vertex_series[:,i] = f.result().flatten()    
+                print(f"=== {Ro_per_vertex_series.shape} {Ro_per_vertex_series_copy.shape}")
+                print(f"==== {np.amax(Ro_per_vertex_series)} {np.amax(Ro_per_vertex_series_copy)}")
+                print(f"===== {np.amax(np.abs(Ro_per_vertex_series-Ro_per_vertex_series_copy))}")
+                #for future in concurrent.futures.as_completed(futures):
+                #    p.append([parameter_data_path, future.result()])
+            print(f"Finish multithreaded VO")
+            logger.debug(f"VR calculation MT {time.time()-s}s")
+
         hexa_renumbered = [ [point_original_to_cached[i] for i in hexa] for hexa in hexa_to_keep ]
         filename_hex = path.join(out_path, self.modelName+'_hexa_ts_'+str(self.tti)+'.epc')
         write_hexa_grid_with_timeseries(filename_hex, points_cached_series, hexa_renumbered, "hexamesh",
@@ -1434,6 +1458,34 @@ class UniformNodeGridFixedSizeMeshModel:
         )
         return data
 
+    def rddms_compute_VO_timestep(self, tti):
+        comm = MPI.COMM_WORLD
+        if (comm.rank==0):
+            Temp_per_vertex_series = np.empty([len(self.time_indices), len(self.p_to_keep)])
+            points_cached_series = np.empty([len(self.time_indices), len(self.p_to_keep),3])
+            Ro_per_vertex_series = None
+            Temp_per_vertex = np.empty([len(self.p_to_keep)])
+            points_cached = np.empty([len(self.p_to_keep),3])
+            Ro_per_vertex = None
+            Ro_per_vertex = np.empty([len(self.p_to_keep)])
+            n_vertices = self.x_original_order_series[0].shape[0]
+            self.Ro_per_vertex_series = None
+            Ro_per_vertex_series = None
+            for idx, tti_x in enumerate(self.time_indices): # oldest first
+                x_original_order = self.x_original_order_series[idx]
+                T_per_vertex = self.T_per_vertex_series[idx]
+                T_per_vertex_filt = [ T_per_vertex[i] for i in range(n_vertices) if i in self.p_to_keep  ]
+                Temp_per_vertex_series[idx,:] = T_per_vertex_filt
+            s = time.time()
+            logger.debug("Calculating vitrinite reflectance EasyRo%DL ==")
+            Ro_per_vertex_series = np.empty([len(self.time_indices), len(self.p_to_keep)])
+            # Ro_per_vertex = np.empty([len(self.p_to_keep)])
+            for i in range(Temp_per_vertex_series.shape[1]):
+                ts = Temp_per_vertex_series[:,i]
+                ro = VR.easyRoDL(ts)
+                Ro_per_vertex_series[:,i] = ro.flatten()
+            logger.debug(f"VR calculation {time.time()-s}s ==")
+            self.Ro_per_vertex_series = Ro_per_vertex_series
 
     def rddms_upload_timestep(self, tti, is_final=False):
         # x_original_order, T_per_vertex = self.get_node_pos_and_temp(tti) # self.time_indices[0])
@@ -1441,7 +1493,7 @@ class UniformNodeGridFixedSizeMeshModel:
         # age_per_vertex_keep = np.array([ self.age_per_vertex[i] for i in range(n_vertices) if i in self.p_to_keep ])
         Temp_per_vertex_series = np.empty([len(self.time_indices), len(self.p_to_keep)])
         points_cached_series = np.empty([len(self.time_indices), len(self.p_to_keep),3])
-        Ro_per_vertex_series = None
+        self.Ro_per_vertex_series = None
         Temp_per_vertex = np.empty([len(self.p_to_keep)])
         points_cached = np.empty([len(self.p_to_keep),3])
         Ro_per_vertex = None
@@ -1457,27 +1509,14 @@ class UniformNodeGridFixedSizeMeshModel:
             if (i in self.p_to_keep):
                 points_cached[count,:] = x_original_order[i,:]
                 count += 1
-        Ro_per_vertex_series = None
-        if is_final and self.run_ro:
-            for idx, tti_x in enumerate(self.time_indices): # oldest first
-                x_original_order = self.x_original_order_series[idx]
-                T_per_vertex = self.T_per_vertex_series[idx]
-                T_per_vertex_filt = [ T_per_vertex[i] for i in range(n_vertices) if i in self.p_to_keep  ]
-                Temp_per_vertex_series[idx,:] = T_per_vertex_filt
-            s = time.time()
-            logger.debug("Calculating vitrinite reflectance EasyRo%DL")
-            Ro_per_vertex_series = np.empty([len(self.time_indices), len(self.p_to_keep)])
-            # Ro_per_vertex = np.empty([len(self.p_to_keep)])
-            for i in range(Temp_per_vertex_series.shape[1]):
-                ts = Temp_per_vertex_series[:,i]
-                ro = VR.easyRoDL(ts)
-                Ro_per_vertex_series[:,i] = ro.flatten()
-            logger.debug(f"VR calculation {time.time()-s}s")
+
+        # self.rddms_compute_VO_timestep(tti, is_final=is_final)
+
         data = rddms_upload_data_timestep(
             tti,
             Temp_per_vertex,
             points_cached,
-            Ro_per_vertex_series
+            self.Ro_per_vertex_series
         )
         return data
 
@@ -1802,7 +1841,7 @@ sys.excepthook = global_except_hook
 
 
 def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0, pad_num_nodes=0,
-            out_dir = "out-mapA/",sedimentsOnly=False, writeout=True, base_flux=None, 
+            out_dir = "out-mapA/", sedimentsOnly=False, writeout=True, base_flux=None, 
             callback_fcn_initial=None, callback_fcn_timestep=None):
     logger.setLevel(10)  # numeric level equals DEBUG
     comm = MPI.COMM_WORLD
@@ -1813,7 +1852,7 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
     mms_tti = []
     tti = 0
     # base_flux = 0.0033
-    writeout_final = True
+    writeout_final = out_dir is not None
     time_solve = 0.0
     upload_rddms = True
     with Bar('Processing...',check_tty=False, max=(start_time-end_time)) as bar:
@@ -1869,8 +1908,14 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
                             callback_fcn_initial(data, topo)
                     else:
                         pass
-                comm.Barrier()                    
+                comm.Barrier()  
+                # if comm.rank==0:
+                #     mm2.rddms_compute_VO_timestep(tti, is_final=(tti==end_time))
+                if ((tti==end_time)):
+                    mm2.rddms_compute_VO_timestep(tti)
+                comm.Barrier()
                 if comm.rank==0:
+                    print(f"rddms_upload_timestep 0 {type(data)}")
                     data = mm2.rddms_upload_timestep(tti, is_final=(tti==end_time))
                     print(f"rddms_upload_timestep {type(data)}")
                     if (callback_fcn_timestep is not None):
@@ -1888,11 +1933,13 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
             comm.send(mm2.posarr, dest=0, tag=((comm.rank-1)*10)+20)
             comm.send(mm2.Tarr, dest=0, tag=((comm.rank-1)*10)+24)
         if comm.rank==0:
+            tic()
             mm2.receive_mpi_messages()
             Path(out_dir).mkdir(parents=True, exist_ok=True)
             # EPCfilename = mm2.write_hexa_mesh_resqml("temp/", end_time)
             # logger.info(f"RESQML model written to: {EPCfilename}")
             EPCfilename_ts = mm2.write_hexa_mesh_timeseries(out_dir)
             logger.info(f"RESQML partial model with timeseries written to: {EPCfilename_ts}")
+            toc(msg="write mesh and timeseries to file")
             read_mesh_resqml_hexa(EPCfilename_ts)  # test reading of the .epc file
     return mm2

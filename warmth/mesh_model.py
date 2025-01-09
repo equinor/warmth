@@ -97,6 +97,7 @@ class UniformNodeGridFixedSizeMeshModel:
         self.run_ro = True
         self.x_original_order_series = []
         self.T_per_vertex_series = []
+        self.Ro_per_vertex_series = None
 
         # 2 6 6 6
         self.numElemPerSediment = 2
@@ -1458,42 +1459,13 @@ class UniformNodeGridFixedSizeMeshModel:
         )
         return data
 
-    def rddms_compute_VO_timestep(self, tti):
-        comm = MPI.COMM_WORLD
-        if (comm.rank==0):
-            Temp_per_vertex_series = np.empty([len(self.time_indices), len(self.p_to_keep)])
-            points_cached_series = np.empty([len(self.time_indices), len(self.p_to_keep),3])
-            Ro_per_vertex_series = None
-            Temp_per_vertex = np.empty([len(self.p_to_keep)])
-            points_cached = np.empty([len(self.p_to_keep),3])
-            Ro_per_vertex = None
-            Ro_per_vertex = np.empty([len(self.p_to_keep)])
-            n_vertices = self.x_original_order_series[0].shape[0]
-            self.Ro_per_vertex_series = None
-            Ro_per_vertex_series = None
-            for idx, tti_x in enumerate(self.time_indices): # oldest first
-                x_original_order = self.x_original_order_series[idx]
-                T_per_vertex = self.T_per_vertex_series[idx]
-                T_per_vertex_filt = [ T_per_vertex[i] for i in range(n_vertices) if i in self.p_to_keep  ]
-                Temp_per_vertex_series[idx,:] = T_per_vertex_filt
-            s = time.time()
-            logger.debug("Calculating vitrinite reflectance EasyRo%DL ==")
-            Ro_per_vertex_series = np.empty([len(self.time_indices), len(self.p_to_keep)])
-            # Ro_per_vertex = np.empty([len(self.p_to_keep)])
-            for i in range(Temp_per_vertex_series.shape[1]):
-                ts = Temp_per_vertex_series[:,i]
-                ro = VR.easyRoDL(ts)
-                Ro_per_vertex_series[:,i] = ro.flatten()
-            logger.debug(f"VR calculation {time.time()-s}s ==")
-            self.Ro_per_vertex_series = Ro_per_vertex_series
-
     def rddms_upload_timestep(self, tti, is_final=False):
         # x_original_order, T_per_vertex = self.get_node_pos_and_temp(tti) # self.time_indices[0])
         # n_vertices = x_original_order.shape[0]
         # age_per_vertex_keep = np.array([ self.age_per_vertex[i] for i in range(n_vertices) if i in self.p_to_keep ])
         Temp_per_vertex_series = np.empty([len(self.time_indices), len(self.p_to_keep)])
         points_cached_series = np.empty([len(self.time_indices), len(self.p_to_keep),3])
-        self.Ro_per_vertex_series = None
+        # self.Ro_per_vertex_series = None
         Temp_per_vertex = np.empty([len(self.p_to_keep)])
         points_cached = np.empty([len(self.p_to_keep),3])
         Ro_per_vertex = None
@@ -1510,16 +1482,14 @@ class UniformNodeGridFixedSizeMeshModel:
                 points_cached[count,:] = x_original_order[i,:]
                 count += 1
 
-        # self.rddms_compute_VO_timestep(tti, is_final=is_final)
-
+        Ro = self.Ro_per_vertex_series if (self.Ro_per_vertex_series is not None) else None
         data = rddms_upload_data_timestep(
             tti,
             Temp_per_vertex,
             points_cached,
-            self.Ro_per_vertex_series
+            Ro
         )
         return data
-
 
     #
     # =====================================
@@ -1909,11 +1879,6 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
                     else:
                         pass
                 comm.Barrier()  
-                # if comm.rank==0:
-                #     mm2.rddms_compute_VO_timestep(tti, is_final=(tti==end_time))
-                if ((tti==end_time)):
-                    mm2.rddms_compute_VO_timestep(tti)
-                comm.Barrier()
                 if comm.rank==0:
                     print(f"rddms_upload_timestep 0 {type(data)}")
                     data = mm2.rddms_upload_timestep(tti, is_final=(tti==end_time))
@@ -1924,17 +1889,17 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
 
             bar.next()
     logger.info(f"total time solve 3D: {time_solve}")
-    if (writeout_final):
-        comm.Barrier()
-        if comm.rank>=1:
-            comm.send(mm2.mesh.topology.index_map(0).local_to_global(list(range(mm2.mesh.geometry.x.shape[0]))) , dest=0, tag=((comm.rank-1)*10)+21)
-            comm.send(mm2.mesh_reindex, dest=0, tag=((comm.rank-1)*10)+23)
-            comm.send(mm2.mesh_vertices_age, dest=0, tag=((comm.rank-1)*10)+25)
-            comm.send(mm2.posarr, dest=0, tag=((comm.rank-1)*10)+20)
-            comm.send(mm2.Tarr, dest=0, tag=((comm.rank-1)*10)+24)
-        if comm.rank==0:
-            tic()
-            mm2.receive_mpi_messages()
+    comm.Barrier()
+    if comm.rank>=1:
+        comm.send(mm2.mesh.topology.index_map(0).local_to_global(list(range(mm2.mesh.geometry.x.shape[0]))) , dest=0, tag=((comm.rank-1)*10)+21)
+        comm.send(mm2.mesh_reindex, dest=0, tag=((comm.rank-1)*10)+23)
+        comm.send(mm2.mesh_vertices_age, dest=0, tag=((comm.rank-1)*10)+25)
+        comm.send(mm2.posarr, dest=0, tag=((comm.rank-1)*10)+20)
+        comm.send(mm2.Tarr, dest=0, tag=((comm.rank-1)*10)+24)
+    if comm.rank==0:
+        tic()
+        mm2.receive_mpi_messages()
+        if (writeout_final):
             Path(out_dir).mkdir(parents=True, exist_ok=True)
             # EPCfilename = mm2.write_hexa_mesh_resqml("temp/", end_time)
             # logger.info(f"RESQML model written to: {EPCfilename}")
@@ -1942,4 +1907,5 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
             logger.info(f"RESQML partial model with timeseries written to: {EPCfilename_ts}")
             toc(msg="write mesh and timeseries to file")
             read_mesh_resqml_hexa(EPCfilename_ts)  # test reading of the .epc file
+    comm.Barrier()
     return mm2

@@ -215,9 +215,9 @@ class UniformNodeGridFixedSizeMeshModel:
 
     def send_mpi_messages_per_timestep(self):
         comm = MPI.COMM_WORLD
-        print(range(self.mesh.geometry.x.shape[0]), flush=True)
-        print(self.mesh.topology.index_map(0), flush=True)
-        print(self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0]))), flush=True)
+        # print(range(self.mesh.geometry.x.shape[0]), flush=True)
+        # print(self.mesh.topology.index_map(0), flush=True)
+        # print(self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0]))), flush=True)
         comm.send(self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0]))) , dest=0, tag=((comm.rank-1)*10)+1021)
         comm.send(self.mesh_reindex, dest=0, tag=((comm.rank-1)*10)+1023)
         comm.send(self.mesh_vertices_age, dest=0, tag=((comm.rank-1)*10)+1025)
@@ -874,9 +874,9 @@ class UniformNodeGridFixedSizeMeshModel:
         mpi_print(f"Ghost cells (global numbering): {self.mesh.topology.index_map(3).ghosts}")
         mpi_print(f"Ghost nodes (global numbering): {self.mesh.topology.index_map(0).ghosts}")
 
-        mpi_print(f"Dir local cells: {type(self.mesh.topology.index_map(3))} {dir(self.mesh.topology.index_map(3))}")
-        mpi_print(f"Dir local verts: {dir(self.mesh.topology.index_map(0))}")  # local_to_global ! ?
-        mpi_print(f"Type local verts: {type(self.mesh.topology.index_map(0))}")
+        # mpi_print(f"Dir local cells: {type(self.mesh.topology.index_map(3))} {dir(self.mesh.topology.index_map(3))}")
+        # mpi_print(f"Dir local verts: {dir(self.mesh.topology.index_map(0))}")  # local_to_global ! ?
+        # mpi_print(f"Type local verts: {type(self.mesh.topology.index_map(0))}")
 
         # store original vertex order 
         self.mesh_reindex = np.array(self.mesh.geometry.input_global_indices).astype(np.int32)
@@ -1482,12 +1482,12 @@ class UniformNodeGridFixedSizeMeshModel:
                 points_cached[count,:] = x_original_order[i,:]
                 count += 1
 
-        Ro = self.Ro_per_vertex_series if (self.Ro_per_vertex_series is not None) else None
+        # Ro = self.Ro_per_vertex_series if (self.Ro_per_vertex_series is not None) else None
         data = rddms_upload_data_timestep(
             tti,
             Temp_per_vertex,
             points_cached,
-            Ro
+            np.zeros(1)
         )
         return data
 
@@ -1869,20 +1869,21 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
                 if comm.rank==0:
                     mm2.receive_mpi_messages_per_timestep()
                 comm.Barrier()                    
+                toc(msg="Sync result across MPI nodes")
                 if (tti==start_time):
                     # initial upload
                     if comm.rank==0:
                         data, topo = mm2.rddms_upload_initial(tti)
-                        print(f"rddms_upload_initial {type(data)} {type(topo)}")
+                        # print(f"rddms_upload_initial {type(data)} {type(topo)}")
                         if (callback_fcn_initial is not None):
                             callback_fcn_initial(data, topo)
                     else:
                         pass
                 comm.Barrier()  
                 if comm.rank==0:
-                    print(f"rddms_upload_timestep 0 {type(data)}")
+                    # print(f"rddms_upload_timestep {tti} {type(data)}")
                     data = mm2.rddms_upload_timestep(tti, is_final=(tti==end_time))
-                    print(f"rddms_upload_timestep {type(data)}")
+                    # print(f"rddms_upload_timestep {type(data)}")
                     if (callback_fcn_timestep is not None):
                         callback_fcn_timestep(data)
                 comm.Barrier()                    

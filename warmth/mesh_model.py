@@ -1596,13 +1596,13 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
         for tti in range(start_time, end_time-1,-1): #start from oldest
             rebuild_mesh = (tti==start_time)
             if rebuild_mesh:
-                logger.info(f"Rebuild/reload mesh at {tti}")          
+                logger.debug(f"Rebuild/reload mesh at {tti}")          
                 mm2 = UniformNodeGridFixedSizeMeshModel(builder, parameters,sedimentsOnly, padding_num_nodes=pad_num_nodes)
                 mm2.buildMesh(tti)
                 if (base_flux is not None):
                     mm2.baseFluxMagnitude = base_flux
             else:
-                logger.info(f"Re-generating mesh vertices at {tti}")
+                logger.debug(f"Re-generating mesh vertices at {tti}")
                 tic()
                 mm2.updateMesh(tti, optimized=True)
                 toc(msg="update mesh")

@@ -94,7 +94,6 @@ class UniformNodeGridFixedSizeMeshModel:
         self.posarr = []
         self.Tarr = []
         self.time_indices = []
-        self.run_ro = True
         self.x_original_order_series = []
         self.T_per_vertex_series = []
         self.Ro_per_vertex_series = None
@@ -377,7 +376,7 @@ class UniformNodeGridFixedSizeMeshModel:
     def get_resqpy():
         pass
 
-    def write_hexa_mesh_timeseries( self, out_path, run_ro=False):
+    def write_hexa_mesh_timeseries( self, out_path):
         """Prepares arrays and calls the RESQML output helper function for hexa meshes:  the lith and aesth are removed, and the remaining
            vertices and cells are renumbered;  the sediment properties are prepared for output.
 
@@ -429,38 +428,6 @@ class UniformNodeGridFixedSizeMeshModel:
                     points_cached_series[idx,count,:]=x_original_order[i,:]
                     point_original_to_cached[i]= count
                     count += 1
-        if run_ro:
-            s = time.time()
-            logger.debug("Calculating vitrinite reflectance EasyRo%DL")
-            Ro_per_vertex_series = np.empty([len(self.time_indices), len(p_to_keep)])
-            for i in range(Temp_per_vertex_series.shape[1]):
-                ts = Temp_per_vertex_series[:,i]
-                ro = VR.easyRoDL(ts)
-                Ro_per_vertex_series[:,i] = ro.flatten()
-            logger.debug(f"VR calculation {time.time()-s}s")
-            Ro_per_vertex_series_copy = Ro_per_vertex_series.copy()
-
-            p = []
-            Ro_per_vertex_series = np.empty([len(self.time_indices), len(p_to_keep)])
-            print(f"Begin multithreaded VO")
-            s = time.time()
-            from mpi4py.futures import MPIPoolExecutor
-            import concurrent.futures
-            print(f"Begin multithreaded VO")
-            with MPIPoolExecutor(max_workers=10) as th:
-                futures = [th.submit(VR.easyRoDL, Temp_per_vertex_series[:,i]) for i in range(Temp_per_vertex_series.shape[1])]
-                print(f"futures {len(futures)} {type(futures[0])}")
-                p = concurrent.futures.wait(futures)
-                print(f"p {len(p)} {type(p[0])}")
-                for i,f in enumerate(futures):
-                    Ro_per_vertex_series[:,i] = f.result().flatten()    
-                print(f"=== {Ro_per_vertex_series.shape} {Ro_per_vertex_series_copy.shape}")
-                print(f"==== {np.amax(Ro_per_vertex_series)} {np.amax(Ro_per_vertex_series_copy)}")
-                print(f"===== {np.amax(np.abs(Ro_per_vertex_series-Ro_per_vertex_series_copy))}")
-                #for future in concurrent.futures.as_completed(futures):
-                #    p.append([parameter_data_path, future.result()])
-            print(f"Finish multithreaded VO")
-            logger.debug(f"VR calculation MT {time.time()-s}s")
 
         hexa_renumbered = [ [point_original_to_cached[i] for i in hexa] for hexa in hexa_to_keep ]
         filename_hex = path.join(out_path, self.modelName+'_hexa_ts_'+str(self.tti)+'.epc')

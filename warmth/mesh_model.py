@@ -740,11 +740,11 @@ class UniformNodeGridFixedSizeMeshModel:
         """        
         self.tti = tti
         self.buildVertices(time_index=tti)
-        logger.info("Built vertices")
+        logger.debug("Built vertices")
         self.constructMesh()
-        logger.info("Built mesh")
+        logger.debug("Built mesh")
         self.updateMesh(tti)
-        logger.info("Updated vertices")
+        logger.debug(f"Updated vertices for time {tti}")
      
 
     def updateMesh(self,tti:int, optimized=False):
@@ -854,7 +854,7 @@ class UniformNodeGridFixedSizeMeshModel:
         )
         
         def mpi_print(s):
-            logger.info(f"Rank {comm.rank}: {s}")
+            logger.debug(f"Rank {comm.rank}: {s}")
 
         fn = self.modelName+"_mesh.xdmf"
         if comm.rank==0:
@@ -1829,13 +1829,13 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
         for tti in range(start_time, end_time-1,-1): #start from oldest
             rebuild_mesh = (tti==start_time)
             if rebuild_mesh:
-                logger.info(f"Rebuild/reload mesh at {tti}")          
+                logger.debug(f"Rebuild/reload mesh at {tti}")          
                 mm2 = UniformNodeGridFixedSizeMeshModel(builder, parameters,sedimentsOnly, padding_num_nodes=pad_num_nodes)
                 mm2.buildMesh(tti)
                 if (base_flux is not None):
                     mm2.baseFluxMagnitude = base_flux
             else:
-                logger.info(f"Re-generating mesh vertices at {tti}")
+                logger.debug(f"Re-generating mesh vertices at {tti}")
                 tic()
                 mm2.updateMesh(tti, optimized=True)
                 toc(msg="update mesh")

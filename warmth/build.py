@@ -320,7 +320,7 @@ class single_node:
 
 
 def load_node(filepath: Path) -> single_node:
-    logger.info(f"Loading node from {filepath}")
+    logger.debug(f"Loading node from {filepath}")
     data = compressed_pickle_open(filepath)
     return data
 
@@ -519,7 +519,8 @@ class Builder:
                 "solidus",
                 "liquidus",
                 "erosion",
-                "erosion_duration"
+                "erosion_duration",
+                "strat"
             ]
         )
 
@@ -713,7 +714,7 @@ class Builder:
             ]
             logger.info('Extracting %s sedimentary packages with %s horizons', len(
                 futures), len(futures) + 1)
-            logger.info('Threads:%s', len(poolx._threads))
+            logger.debug('Threads:%s', len(poolx._threads))
 
             # When each job finishes
             for future in concurrent.futures.as_completed(futures):
@@ -734,15 +735,16 @@ class Builder:
         """
         indexer = self.grid.indexing_arr
 
-
+        valid = 0
+        dropped = 0
         for index in indexer:
-
             if self.nodes[index[0]][index[1]] != False:
                 node_sed: list[_sediment_layer_] = []
                 for sed_grid in all_sediments_grid:
                     node_sed.append(sed_grid[index[0]][index[1]])
                 if all(node_sed) is False:
                     self.nodes[index[0]][index[1]] = False
+                    dropped += 1
                     logger.warning(f"dropping node {index}. One of the layer has no depth value")
                 else:
                     top = np.empty(0)
@@ -773,6 +775,7 @@ class Builder:
 
                     if checker is False:
                         self.nodes[index[0]][index[1]] = False
+                        dropped += 1
                     else:
                         df = self._fix_nan_sed(df)
                         n = single_node()
@@ -781,8 +784,10 @@ class Builder:
                         n.sediments_inputs=df
                         n.indexer = index
                         self.nodes[index[0]][index[1]] = n
+                        valid += 1
             else:
                 pass
+        logger.info(f"Dropped {dropped} nodes. Remaining valid nodes = {valid}")
         return
     
     def _check_nan_sed(self,df:pd.DataFrame)-> bool:

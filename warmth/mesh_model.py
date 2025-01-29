@@ -16,11 +16,11 @@ from progress.bar import Bar
 from warmth.build import single_node, Builder
 from .parameters import Parameters
 from warmth.logging import logger
-from warmth.postprocessing import VR
 from .mesh_utils import  top_crust,top_sed,thick_crust,  top_lith, top_asth, top_sed_id, bottom_sed_id,interpolateNode, interpolate_all_nodes
 from .resqpy_helpers import write_tetra_grid_with_properties, write_hexa_grid_with_timeseries, write_hexa_grid_with_properties,read_mesh_resqml_hexa
+
 def tic():
-    #Homemade version of matlab tic and toc functions
+    # Homemade version of matlab tic and toc functions
     global startTime_for_tictoc
     startTime_for_tictoc = time.time()
 
@@ -253,8 +253,12 @@ class UniformNodeGridFixedSizeMeshModel:
                 self.T_per_vertex_ts[val] = self.sub_Tarr_s[k][ind]
                 self.age_per_vertex_ts[val] = self.mesh_vertices_age_s[k][ind]
         print(f"receive_mpi_messages_per_timestep {comm.rank}, {self.x_original_order_ts.shape} {self.T_per_vertex_ts.shape}")
-        self.x_original_order_series.append(self.x_original_order_ts)
-        self.T_per_vertex_series.append(self.T_per_vertex_ts)
+        
+        #
+        # Do not store points and Temperatures from every time step, to save memory
+        #
+        # self.x_original_order_series.append(self.x_original_order_ts)
+        # self.T_per_vertex_series.append(self.T_per_vertex_ts)
         pass
 
     def receive_mpi_messages(self):
@@ -1427,18 +1431,10 @@ class UniformNodeGridFixedSizeMeshModel:
         return data
 
     def rddms_upload_timestep(self, tti, is_final=False):
-        # x_original_order, T_per_vertex = self.get_node_pos_and_temp(tti) # self.time_indices[0])
-        # n_vertices = x_original_order.shape[0]
-        # age_per_vertex_keep = np.array([ self.age_per_vertex[i] for i in range(n_vertices) if i in self.p_to_keep ])
-        Temp_per_vertex_series = np.empty([len(self.time_indices), len(self.p_to_keep)])
-        points_cached_series = np.empty([len(self.time_indices), len(self.p_to_keep),3])
-        # self.Ro_per_vertex_series = None
         Temp_per_vertex = np.empty([len(self.p_to_keep)])
         points_cached = np.empty([len(self.p_to_keep),3])
-        Ro_per_vertex = None
-        Ro_per_vertex = np.empty([len(self.p_to_keep)])
 
-        x_original_order, T_per_vertex = x_original_order, T_per_vertex = (self.x_original_order_ts, self.T_per_vertex_ts) # self.get_node_pos_and_temp(tti)
+        x_original_order, T_per_vertex = x_original_order, T_per_vertex = (self.x_original_order_ts, self.T_per_vertex_ts)
         n_vertices = x_original_order.shape[0]            
         T_per_vertex_filt = [ T_per_vertex[i] for i in range(n_vertices) if i in self.p_to_keep  ]
         Temp_per_vertex[:] = T_per_vertex_filt
@@ -1449,7 +1445,6 @@ class UniformNodeGridFixedSizeMeshModel:
                 points_cached[count,:] = x_original_order[i,:]
                 count += 1
 
-        # Ro = self.Ro_per_vertex_series if (self.Ro_per_vertex_series is not None) else None
         data = rddms_upload_data_timestep(
             tti,
             Temp_per_vertex,

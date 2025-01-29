@@ -3,6 +3,7 @@ from pathlib import Path
 import numpy as np
 from mpi4py import MPI
 import meshio
+import basix
 import dolfinx  
 from os import path
 from petsc4py import PETSc
@@ -166,7 +167,8 @@ class UniformNodeGridFixedSizeMeshModel:
         def boundary(x):
             return np.full(x.shape[1], True)
         entities = dolfinx.mesh.locate_entities(self.mesh, 3, boundary )
-        tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh, 3, entities, False)
+        tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh._cpp_object, 3, entities, False)
+
         p0 = self.mesh.geometry.x[tet,:]
         tet_to_keep = []
         p_to_keep = set()
@@ -891,7 +893,7 @@ class UniformNodeGridFixedSizeMeshModel:
         def boundary(x):
             return np.full(x.shape[1], True)
         entities = dolfinx.mesh.locate_entities(self.mesh, 3, boundary )
-        tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh, 3, entities, False)
+        tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh._cpp_object, 3, entities, False)
         self.layer_id_per_vertex = [ [] for _ in range(self.mesh.geometry.x.shape[0]) ]
         ## 
 
@@ -924,7 +926,7 @@ class UniformNodeGridFixedSizeMeshModel:
         def boundary(x):
             return np.full(x.shape[1], True)
         entities = dolfinx.mesh.locate_entities(self.mesh, 3, boundary )
-        tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh, 3, entities, False)
+        tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh._cpp_object, 3, entities, False)
         self.layer_id_per_vertex = [ [] for _ in range(self.mesh.geometry.x.shape[0]) ]
         midp = []
         for i,t in enumerate(tet):
@@ -944,7 +946,7 @@ class UniformNodeGridFixedSizeMeshModel:
 
         self.mesh_vertex_layerIDs = np.full_like(self.mesh.geometry.x[:,2], 100, dtype=np.int32 )
         # piecewise constant Kappa in the tetrahedra
-        Q = dolfinx.fem.FunctionSpace(self.mesh, ("DG", 0))  # discontinuous Galerkin, degree zero
+        Q = dolfinx.fem.functionspace(self.mesh, ("DG", 0))  # discontinuous Galerkin, degree zero
         thermalCond = dolfinx.fem.Function(Q)
         c_rho = dolfinx.fem.Function(Q)
         self.c_rho0 = dolfinx.fem.Function(Q)
@@ -964,7 +966,7 @@ class UniformNodeGridFixedSizeMeshModel:
             return np.full(x.shape[1], True)
 
         entities = dolfinx.mesh.locate_entities(self.mesh, 3, boundary )
-        tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh, 3, entities, False)
+        tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh._cpp_object, 3, entities, False)
 
         p0 = self.mesh.geometry.x[tet,:]
         midp = np.sum(p0,1)*0.25   # midpoints of tetrahedra
@@ -1149,8 +1151,9 @@ class UniformNodeGridFixedSizeMeshModel:
 
         #
         # define function space
-        self.FE = ufl.FiniteElement("CG", self.mesh.ufl_cell(), self.CGorder)
-        self.V = dolfinx.fem.FunctionSpace(self.mesh, self.FE)
+        self.FE = basix.ufl.element(  "CG", self.mesh.ufl_cell().cellname(), degree=self.CGorder)
+        # self.FE = ufl.FiniteElement("CG", self.mesh.ufl_cell(), self.CGorder)
+        self.V = dolfinx.fem.functionspace(self.mesh, self.FE)
 
         # Define solution variable uh
         self.uh = dolfinx.fem.Function(self.V)
@@ -1324,7 +1327,8 @@ class UniformNodeGridFixedSizeMeshModel:
             dolfinx.fem.petsc.set_bc(b, [self.bc])
 
             # Solve linear problem
-            solver.solve(b, self.uh.vector)
+            # solver.solve(b, self.uh.vector)
+            solver.solve(b, self.uh.x.petsc_vec)
             self.uh.x.scatter_forward()
 
             # Update solution at previous time step (u_n)
@@ -1591,7 +1595,7 @@ class UniformNodeGridFixedSizeMeshModel:
             return np.full(x.shape[1], True)
 
         entities = dolfinx.mesh.locate_entities(self.mesh, 3, boundary )
-        tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh, 3, entities, False)
+        tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh._cpp_object, 3, entities, False)
 
         p0 = self.mesh.geometry.x[tet,:]
         totalvol = 0

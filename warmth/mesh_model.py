@@ -1809,7 +1809,7 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
             mm2.useBaseFlux = (base_flux is not None)
             mm2.baseFluxMagnitude = base_flux
 
-            if ( len(mms2) == 0):
+            if ( tti==start_time):
                 tic()
                 mm2.useBaseFlux = False
                 mm2.setupSolverAndSolve(n_steps=40, time_step = 314712e8 * 2e2, skip_setup=False)   
@@ -1826,7 +1826,7 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
                 # mm2.writeOutputFunctions(out_dir+"test4-"+str(tti)+".xdmf", tti=tti)
                 toc(msg="write function")
             
-            mms2.append(mm2)
+            # mms2.append(mm2)
             mms_tti.append(tti)
             if (upload_rddms):
                 tic()

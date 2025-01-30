@@ -1,6 +1,7 @@
 from typing import Tuple
 from pathlib import Path
 import numpy as np
+import gc
 from mpi4py import MPI
 import meshio
 import basix
@@ -1337,6 +1338,15 @@ class UniformNodeGridFixedSizeMeshModel:
             self.u_n.x.array[:] = self.uh.x.array
             # comm.Barrier()
         self.Tarr.append(self.uh.x.array[:].copy())
+
+        solver.destroy()
+        A.destroy()
+        b.destroy()
+        del(bilinear_form)
+        del(linear_form)
+        del(A)
+        gc.collect()
+                
         # print("latest Tarr", self.Tarr[-1], np.mean(self.Tarr[-1]))
 
     def rddms_upload_initial(self, tti):
@@ -1859,7 +1869,7 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
     logger.info(f"total time solve 3D: {time_solve}")
     comm.Barrier()
     if comm.rank>=1:
-        comm.send(mm2.mesh.topology.index_map(0).local_to_global(np.array(list(range(mm2.mesh.geometry.x.shape[0])),dtype=np.int32) , dest=0, tag=((comm.rank-1)*10)+21))
+        comm.send(mm2.mesh.topology.index_map(0).local_to_global(np.array(list(range(mm2.mesh.geometry.x.shape[0])), dtype=np.int32)) , dest=0, tag=((comm.rank-1)*10)+21)
         comm.send(mm2.mesh_reindex, dest=0, tag=((comm.rank-1)*10)+23)
         comm.send(mm2.mesh_vertices_age, dest=0, tag=((comm.rank-1)*10)+25)
         comm.send(mm2.posarr, dest=0, tag=((comm.rank-1)*10)+20)

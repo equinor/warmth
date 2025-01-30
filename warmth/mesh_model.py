@@ -4,7 +4,8 @@ import numpy as np
 from mpi4py import MPI
 import meshio
 import basix
-import dolfinx  
+import dolfinx
+import dolfinx.fem.petsc
 from os import path
 from petsc4py import PETSc
 import ufl
@@ -219,7 +220,7 @@ class UniformNodeGridFixedSizeMeshModel:
         # print(range(self.mesh.geometry.x.shape[0]), flush=True)
         # print(self.mesh.topology.index_map(0), flush=True)
         # print(self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0]))), flush=True)
-        comm.send(self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0]))) , dest=0, tag=((comm.rank-1)*10)+1021)
+        comm.send(self.mesh.topology.index_map(0).local_to_global(  np.array(list(range(self.mesh.geometry.x.shape[0])),dtype=np.int32) ) , dest=0, tag=((comm.rank-1)*10)+1021)
         comm.send(self.mesh_reindex, dest=0, tag=((comm.rank-1)*10)+1023)
         comm.send(self.mesh_vertices_age, dest=0, tag=((comm.rank-1)*10)+1025)
         comm.send(self.mesh.geometry.x.copy(), dest=0, tag=( (comm.rank-1)*10)+1020)
@@ -231,7 +232,7 @@ class UniformNodeGridFixedSizeMeshModel:
         self.sub_posarr_s = [self.mesh.geometry.x.copy()]
         self.sub_Tarr_s = [self.uh.x.array[:].copy()]
 
-        self.index_map_s = [self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0])))]
+        self.index_map_s = [self.mesh.topology.index_map(0).local_to_global(np.array(list(range(self.mesh.geometry.x.shape[0])),dtype=np.int32))]
         self.mesh_reindex_s = [self.mesh_reindex]
         self.mesh_vertices_age_s = [self.mesh_vertices_age]
 
@@ -271,7 +272,7 @@ class UniformNodeGridFixedSizeMeshModel:
         self.sub_posarr_s = [self.posarr]
         self.sub_Tarr_s = [self.Tarr]
 
-        self.index_map_s = [self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0])))]
+        self.index_map_s = [self.mesh.topology.index_map(0).local_to_global(np.array(list(range(self.mesh.geometry.x.shape[0])),dtype=np.int32))]
         self.mesh_reindex_s = [self.mesh_reindex]
         self.mesh_vertices_age_s = [self.mesh_vertices_age]
 
@@ -1858,7 +1859,7 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
     logger.info(f"total time solve 3D: {time_solve}")
     comm.Barrier()
     if comm.rank>=1:
-        comm.send(mm2.mesh.topology.index_map(0).local_to_global(list(range(mm2.mesh.geometry.x.shape[0]))) , dest=0, tag=((comm.rank-1)*10)+21)
+        comm.send(mm2.mesh.topology.index_map(0).local_to_global(np.array(list(range(mm2.mesh.geometry.x.shape[0])),dtype=np.int32) , dest=0, tag=((comm.rank-1)*10)+21))
         comm.send(mm2.mesh_reindex, dest=0, tag=((comm.rank-1)*10)+23)
         comm.send(mm2.mesh_vertices_age, dest=0, tag=((comm.rank-1)*10)+25)
         comm.send(mm2.posarr, dest=0, tag=((comm.rank-1)*10)+20)

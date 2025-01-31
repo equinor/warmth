@@ -43,7 +43,13 @@ For full 3D simulation, dolfinx is required.
 
 See https://docs.fenicsproject.org/dolfinx/main/python/installation.html for installation instructions.
 
+## Dependencies
+Requires dolfinx v0.9.0, resqpy 5, Python 3.12.  
+TODO: the resqpy code, which exports simulation results to RESQML (.epc and .h files) has not been tested with resqpy 5. 
+
 ## Tests
-Requires dolfinx v0.6.0
+Requires dolfinx v0.9.0, resqpy 5, Python 3.12.  
 
 ```mpirun -n 2 python3 -m pytest --with-mpi --cov-report=term-missing --cov-report=xml --cov=warmth tests```
+
+

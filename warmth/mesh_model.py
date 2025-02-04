@@ -1356,7 +1356,7 @@ class UniformNodeGridFixedSizeMeshModel:
                 point_original_to_cached[i]= count
                 count += 1
         hexa_renumbered = [ [point_original_to_cached[i] for i in hexa] for hexa in hexa_to_keep ]
-
+        print("index map")
         self.index_map_s = [self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0])))]
         comm = MPI.COMM_WORLD
         for i in range(1,comm.size):
@@ -1364,7 +1364,7 @@ class UniformNodeGridFixedSizeMeshModel:
         nv = np.amax(np.array( [np.amax(index_map) for index_map in self.index_map_s ] )) + 1   # no. vertices/nodes
         self.age_per_vertex = np.ones( nv, dtype= np.int32) * -1
         age_per_vertex_keep = np.array([ self.age_per_vertex[i] for i in range(n_vertices) if i in self.p_to_keep ])
-
+        print("age vertex")
         faces_per_cell = []
         nodes_per_face = []
         faces_dict = {}

@@ -2,6 +2,7 @@ from typing import Tuple
 from pathlib import Path
 import numpy as np
 from mpi4py import MPI
+import time
 import meshio
 import dolfinx  
 from os import path
@@ -264,7 +265,7 @@ class UniformNodeGridFixedSizeMeshModel:
 
     def receive_mpi_messages(self):
         comm = MPI.COMM_WORLD
-        import time
+        
         st = time.time()
 
         self.sub_posarr_s = [self.posarr]
@@ -588,8 +589,6 @@ class UniformNodeGridFixedSizeMeshModel:
         """           
         tti = time_index
         self.tti = time_index
-        import time
-
         compare = False
         if (optimized) and hasattr(self, 'mesh_vertices'):            
             compare = True
@@ -717,7 +716,6 @@ class UniformNodeGridFixedSizeMeshModel:
     def updateMesh(self,tti:int, optimized=False):
         """Construct the mesh positions at the given time index tti, and update the existing mesh with the new values
         """   
-        import time
         assert self.mesh is not None
         self.tti = tti        
         self.buildVertices(time_index=tti, optimized=optimized)
@@ -883,7 +881,6 @@ class UniformNodeGridFixedSizeMeshModel:
         Returns:
             npt.NDArray[np.float64]: Effective conductivity of sediments
         """
-        import time
         def boundary(x):
             return np.full(x.shape[1], True)
         entities = dolfinx.mesh.locate_entities(self.mesh, 3, boundary )
@@ -1057,7 +1054,6 @@ class UniformNodeGridFixedSizeMeshModel:
         """ Generate a dolfinx Dirichlet Boundary condition that applies at the top and bottom vertices.
             The values at the edges are those in function self.TemperatureStep
         """ 
-        import time
         comm = MPI.COMM_WORLD          
 
         st = time.time()
@@ -1156,8 +1152,6 @@ class UniformNodeGridFixedSizeMeshModel:
         self.u_n = dolfinx.fem.Function(self.V)
         self.u_n.name = "u_n"
 
-        import time
-
         st = time.time()
         nn = self.node1D[self.node_index[0]]
         
@@ -1218,7 +1212,6 @@ class UniformNodeGridFixedSizeMeshModel:
         if (not skip_setup) or update_bc:
             self.bc = self.buildDirichletBC()
 
-        import time
         st = time.time()
         self.sedimentsConductivitySekiguchi()
         logger.debug(f"solve delay 2: {time.time()-st}")
@@ -1301,7 +1294,6 @@ class UniformNodeGridFixedSizeMeshModel:
         solver.setType(PETSc.KSP.Type.PREONLY)
         solver.getPC().setType(PETSc.PC.Type.LU)
 
-        import time
         for i in range(num_steps):
             t += dt
             # Update the right hand side reusing the initial vector
@@ -1365,6 +1357,12 @@ class UniformNodeGridFixedSizeMeshModel:
                 count += 1
         hexa_renumbered = [ [point_original_to_cached[i] for i in hexa] for hexa in hexa_to_keep ]
 
+        self.index_map_s = [self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0])))]
+        comm = MPI.COMM_WORLD
+        for i in range(1,comm.size):
+            self.index_map_s.append(comm.recv(source=i, tag=((i-1)*10)+21))
+        nv = np.amax(np.array( [np.amax(index_map) for index_map in self.index_map_s ] )) + 1   # no. vertices/nodes
+        self.age_per_vertex = np.ones( nv, dtype= np.int32) * -1
         age_per_vertex_keep = np.array([ self.age_per_vertex[i] for i in range(n_vertices) if i in self.p_to_keep ])
 
         faces_per_cell = []

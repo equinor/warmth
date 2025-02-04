@@ -41,6 +41,7 @@ class rddms_upload_data_initial:
     cond_per_cell: np.ndarray[np.float64]
     rhp_per_cell: np.ndarray[np.float64]
     lid_per_cell: np.ndarray[np.int32]
+    age_per_vertex = np.ndarray[np.int32]
     hexa_renumbered: List[List[int]]
     geotimes: List[int]
 
@@ -360,11 +361,6 @@ class UniformNodeGridFixedSizeMeshModel:
                 point_original_to_cached[i] = len(points_cached)
                 points_cached.append(x_original_order[i,:])
         hexa_renumbered = [ [point_original_to_cached[i] for i in hexa] for hexa in hexa_to_keep ]
-        
-        # for i,h in enumerate(hexa_renumbered):
-        #     minY = np.amin(np.array ( [np.array(points_cached)[hi][1] for hi in h] ))
-        #     poro0 = poro0_per_cell[i]
-        #     lid0  = lid_to_keep[i]
 
         T_per_vertex_keep = [ T_per_vertex[i] for i in range(nv) if i in p_to_keep ]
         age_per_vertex_keep = [ self.age_per_vertex[i] for i in range(nv) if i in p_to_keep ]
@@ -1369,6 +1365,8 @@ class UniformNodeGridFixedSizeMeshModel:
                 count += 1
         hexa_renumbered = [ [point_original_to_cached[i] for i in hexa] for hexa in hexa_to_keep ]
 
+        age_per_vertex_keep = np.array([ self.age_per_vertex[i] for i in range(n_vertices) if i in self.p_to_keep ])
+
         faces_per_cell = []
         nodes_per_face = []
         faces_dict = {}
@@ -1405,6 +1403,7 @@ class UniformNodeGridFixedSizeMeshModel:
             cond_per_cell,
             rhp_per_cell,
             lid_per_cell,
+            age_per_vertex_keep,
             hexa_renumbered,
             []
         )

@@ -1837,7 +1837,8 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
                 comm.Barrier()                    
 
             bar.next()
-    logger.info(f"total time solve 3D: {time_solve}")
+    if comm.rank==0:
+        logger.info(f"total time solve 3D: {time_solve}")
     comm.Barrier()
     if comm.rank>=1:
         comm.send(mm2.mesh.topology.index_map(0).local_to_global(list(range(mm2.mesh.geometry.x.shape[0]))) , dest=0, tag=((comm.rank-1)*10)+21)

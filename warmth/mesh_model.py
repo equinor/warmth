@@ -11,7 +11,7 @@ import ufl
 import sys
 import time
 from dataclasses import dataclass
-from typing import List, Literal
+from typing import List
 from scipy.interpolate import LinearNDInterpolator
 from progress.bar import Bar
 from warmth.build import single_node, Builder
@@ -42,7 +42,7 @@ class rddms_upload_data_initial:
     cond_per_cell: np.ndarray[np.float64]
     rhp_per_cell: np.ndarray[np.float64]
     lid_per_cell: np.ndarray[np.int32]
-    age_per_vertex = np.ndarray[np.int32]
+    age_per_node: np.ndarray[np.int32]
     hexa_renumbered: List[List[int]]
     geotimes: List[int]
 
@@ -216,9 +216,6 @@ class UniformNodeGridFixedSizeMeshModel:
 
     def send_mpi_messages_per_timestep(self):
         comm = MPI.COMM_WORLD
-        # print(range(self.mesh.geometry.x.shape[0]), flush=True)
-        # print(self.mesh.topology.index_map(0), flush=True)
-        # print(self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0]))), flush=True)
         comm.send(self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0]))) , dest=0, tag=((comm.rank-1)*10)+1021)
         comm.send(self.mesh_reindex, dest=0, tag=((comm.rank-1)*10)+1023)
         comm.send(self.mesh_vertices_age, dest=0, tag=((comm.rank-1)*10)+1025)
@@ -1355,10 +1352,14 @@ class UniformNodeGridFixedSizeMeshModel:
             if (i in self.p_to_keep):
                 point_original_to_cached[i]= count
                 count += 1
-        print(type(self.age_per_vertex_ts))
-        print(self.age_per_vertex_ts[0:50])
-        print(self.age_per_vertex_ts.shape)
-        print(self.T_per_vertex_ts.shape)
+        # remove extra node in crust and mantle. Keep 4 cells 5 nodes
+        first_age = self.age_per_vertex_ts[0]
+        second_idx = np.argwhere(self.age_per_vertex_ts==first_age)[1][0]
+        dim_first = int(self.age_per_vertex_ts.size/second_idx)
+        new_shape = (dim_first, second_idx)
+        new_length = second_idx-8 # from 12 nodes to 4 nodes in crust and mantle
+        age_keep = np.copy(self.age_per_vertex_ts).reshape(new_shape)[:,:new_length].flatten()
+
         hexa_renumbered = [ [point_original_to_cached[i] for i in hexa] for hexa in hexa_to_keep ]
 
         faces_per_cell = []
@@ -1397,11 +1398,10 @@ class UniformNodeGridFixedSizeMeshModel:
             cond_per_cell,
             rhp_per_cell,
             lid_per_cell,
-            self.age_per_vertex_ts,
+            age_keep,
             hexa_renumbered,
             []
         )
-
         face_count = int(len(nodes_per_face)/3)
         set_cell_count = int(len(faces_per_cell)/6)
         nodes_per_face_cl = np.arange(4, 4 * face_count + 1, 4, dtype = int)
@@ -1829,16 +1829,13 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
                     # initial upload
                     if comm.rank==0:
                         data, topo = mm2.rddms_upload_initial(tti)
-                        # print(f"rddms_upload_initial {type(data)} {type(topo)}")
                         if (callback_fcn_initial is not None):
                             callback_fcn_initial(data, topo)
                     else:
                         pass
                 comm.Barrier()  
                 if comm.rank==0:
-                    # print(f"rddms_upload_timestep {tti} {type(data)}")
                     data = mm2.rddms_upload_timestep(tti, is_final=(tti==end_time))
-                    # print(f"rddms_upload_timestep {type(data)}")
                     if (callback_fcn_timestep is not None):
                         callback_fcn_timestep(data)
                 comm.Barrier()                    

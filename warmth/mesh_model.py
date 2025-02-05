@@ -28,10 +28,10 @@ def tic():
 def toc(msg=""):
     if 'startTime_for_tictoc' in globals():
         delta = time.time() - startTime_for_tictoc
-        print (msg+": Elapsed time is " + str(delta) + " seconds.")
+        logger.debug (msg+": Elapsed time is " + str(delta) + " seconds.")
         return delta
     else:
-        print ("Toc: start time not set")
+        logger.debug ("Toc: start time not set")
 
 @dataclass
 class rddms_upload_data_initial:
@@ -251,7 +251,7 @@ class UniformNodeGridFixedSizeMeshModel:
                 self.x_original_order_ts[val,:] = self.sub_posarr_s[k][ind,:] 
                 self.T_per_vertex_ts[val] = self.sub_Tarr_s[k][ind]
                 self.age_per_vertex_ts[val] = self.mesh_vertices_age_s[k][ind]
-        print(f"receive_mpi_messages_per_timestep {comm.rank}, {self.x_original_order_ts.shape} {self.T_per_vertex_ts.shape}")
+        logger.debug(f"receive_mpi_messages_per_timestep {comm.rank}, {self.x_original_order_ts.shape} {self.T_per_vertex_ts.shape}")
         
         #
         # Do not store points and Temperatures from every time step, to save memory
@@ -1127,7 +1127,7 @@ class UniformNodeGridFixedSizeMeshModel:
     def setupSolver(self, initial_state_model = None):
         comm = MPI.COMM_WORLD          
         def mpi_print(s):
-            print(f"Rank {comm.rank}: {s}")
+            logger.debug(f"Rank {comm.rank}: {s}")
 
         self.resetMesh()
         self.Zmin = np.min(self.mesh_vertices, axis=0)[2]

@@ -1352,13 +1352,10 @@ class UniformNodeGridFixedSizeMeshModel:
             if (i in self.p_to_keep):
                 point_original_to_cached[i]= count
                 count += 1
-        # remove extra node in crust and mantle. Keep 4 cells 5 nodes
-        first_age = self.age_per_vertex_ts[0]
-        second_idx = np.argwhere(self.age_per_vertex_ts==first_age)[1][0]
-        dim_first = int(self.age_per_vertex_ts.size/second_idx)
-        new_shape = (dim_first, second_idx)
-        new_length = second_idx-8 # from 12 nodes to 4 nodes in crust and mantle
-        age_keep = np.copy(self.age_per_vertex_ts).reshape(new_shape)[:,:new_length].flatten()
+
+        # tetra to hexa
+        hex_age = np.array([ self.age_per_vertex_ts[i] for i in range(n_vertices) if i in self.p_to_keep  ])
+
 
         hexa_renumbered = [ [point_original_to_cached[i] for i in hexa] for hexa in hexa_to_keep ]
 
@@ -1398,7 +1395,7 @@ class UniformNodeGridFixedSizeMeshModel:
             cond_per_cell,
             rhp_per_cell,
             lid_per_cell,
-            age_keep,
+            hex_age,
             hexa_renumbered,
             []
         )
@@ -1437,7 +1434,6 @@ class UniformNodeGridFixedSizeMeshModel:
             if (i in self.p_to_keep):
                 points_cached[count,:] = x_original_order[i,:]
                 count += 1
-
         data = rddms_upload_data_timestep(
             tti,
             Temp_per_vertex,
@@ -1780,7 +1776,7 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
     writeout_final = out_dir is not None
     time_solve = 0.0
     upload_rddms = True
-    with Bar('Processing...',check_tty=False, max=(start_time-end_time)) as bar:
+    with Bar('Processing...',check_tty=False, max=(start_time-end_time+1)) as bar:
         for tti in range(start_time, end_time-1,-1): #start from oldest
             rebuild_mesh = (tti==start_time)
             if rebuild_mesh:

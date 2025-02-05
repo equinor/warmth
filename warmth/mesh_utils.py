@@ -138,15 +138,6 @@ def interpolateNode(interpolationNodes: List[single_node], interpolationWeights=
     node.X = np.sum( np.array( [node.X * w for node,w in zip(interpolationNodes,iWeightNorm)] ) ) 
     node.Y = np.sum( np.array( [node.Y * w for node,w in zip(interpolationNodes,iWeightNorm)] ) )
 
-    # self.top_crust_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -1)[0][0], age] for age in range(self.max_time)]
-    # #print ("PING B")
-    # self.top_lith_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -2)[0][0], age] for age in range(self.max_time)]
-    # #print ("PING C")
-    # self.top_aest_arr = [ self._depth_out[ np.where(self._idsed[:,age] == -3)[0][0], age] for age in range(self.max_time)]
-    # #print ("PING D")
-
-    # self.top_lithosphere(age)-self.top_crust(age)
-
     if node.subsidence is None:
         node.subsidence = np.sum( np.array( [ node.seabed_arr[:] * w for node,w in zip(interpolationNodes,iWeightNorm)] ) , axis = 0) 
     if node.crust_ls is None:

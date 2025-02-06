@@ -5,7 +5,7 @@
 ![Build Status](https://github.com/equinor/warmth/actions/workflows/docs.yml/badge.svg?branch=main)
 [![codecov](https://codecov.io/gh/equinor/warmth/graph/badge.svg?token=A9LWISA7OI)](https://codecov.io/gh/equinor/warmth)
 ![Python](https://img.shields.io/pypi/pyversions/warmth)
-[![PyPI version](https://badge.fury.io/py/warmth.svg)](https://badge.fury.io/py/wamrth)
+[![PyPI version](https://badge.fury.io/py/warmth.svg)](https://badge.fury.io/py/warmth)
 ![License](https://img.shields.io/github/license/equinor/warmth)
 
 [Documentation](https://equinor.github.io/warmth/)

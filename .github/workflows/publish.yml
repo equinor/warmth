@@ -13,7 +13,7 @@ permissions:
   contents: write
 
 jobs:
-  test1d:
+  tests:
     uses: equinor/warmth/.github/workflows/python-test.yml@main
     with:
       event_type: ${{ github.event_name}}
@@ -25,7 +25,7 @@ jobs:
       GITHUB_TOKEN_WORKFLOW: ${{ secrets.GITHUB_TOKEN }}
 
   deploy:
-    needs: [test1d, snyk]
+    needs: [tests, snyk]
     environment: deploy
     runs-on: ubuntu-latest
 

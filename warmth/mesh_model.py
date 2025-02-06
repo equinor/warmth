@@ -28,10 +28,10 @@ def tic():
 def toc(msg=""):
     if 'startTime_for_tictoc' in globals():
         delta = time.time() - startTime_for_tictoc
-        logger.debug (msg+": Elapsed time is " + str(delta) + " seconds.")
+        logger.debug(msg+": Elapsed time is " + str(delta) + " seconds.")
         return delta
     else:
-        logger.debug ("Toc: start time not set")
+        logger.debug("Toc: start time not set")
 
 @dataclass
 class rddms_upload_data_initial:
@@ -1125,10 +1125,6 @@ class UniformNodeGridFixedSizeMeshModel:
         xdmf.write_function(self.u_n, tti)
 
     def setupSolver(self, initial_state_model = None):
-        comm = MPI.COMM_WORLD          
-        def mpi_print(s):
-            logger.debug(f"Rank {comm.rank}: {s}")
-
         self.resetMesh()
         self.Zmin = np.min(self.mesh_vertices, axis=0)[2]
         self.Zmax = np.max(self.mesh_vertices, axis=0)[2]
@@ -1199,9 +1195,6 @@ class UniformNodeGridFixedSizeMeshModel:
             
             Use skip_setup = True to continue a computation (e.g. after deforming the mesh), instead of starting one from scratch 
         """   
-        comm = MPI.COMM_WORLD          
-        def mpi_print(s):
-            logger.debug(f"Rank {comm.rank}: {s}")
     
         if (not skip_setup):
             self.setupSolver(initial_state_model)
@@ -1231,7 +1224,6 @@ class UniformNodeGridFixedSizeMeshModel:
 
         a = self.c_rho*u*v*ufl.dx + dt*ufl.dot(self.thermalCond*ufl.grad(u), ufl.grad(v)) * ufl.dx
         f = self.rhpFcn 
-        #logger.info(f"mean RHP {np.mean(self.rhpFcn.x.array[:])}")
 
         if ( self.useBaseFlux ):
             baseFlux = self.baseFluxMagnitude
@@ -1248,18 +1240,18 @@ class UniformNodeGridFixedSizeMeshModel:
                 facets = dolfinx.mesh.locate_entities_boundary(self.mesh, dim=(self.mesh.topology.dim - 2),
                                         marker=marker )
                 dofs = dolfinx.fem.locate_dofs_topological(V=self.V, entity_dim=1, entities=facets)
-                if (len(facets)>0):
-                    #print( np.amax(facets))
-                    pass
-                if (len(dofs)>0):
-                    #print( np.amax(dofs))
-                    pass
+                # if (len(facets)>0):
+                #     #print( np.amax(facets))
+                #     pass
+                # if (len(dofs)>0):
+                #     #print( np.amax(dofs))
+                #     pass
                 domain_c.x.array[ dofs ] = 1
             else:
                 basepos = self.getBaseAtMultiplePos(self.mesh.geometry.x[:,0], self.mesh.geometry.x[:,1])
                 domain_c.x.array[  self.mesh.geometry.x[:,2] > basepos*0.99 ] = 1
-                xmin, xmax = np.amin(self.mesh.geometry.x[:,0]), np.amax(self.mesh.geometry.x[:,0])
-                ymin, ymax = np.amin(self.mesh.geometry.x[:,1]), np.amax(self.mesh.geometry.x[:,1])
+                # xmin, xmax = np.amin(self.mesh.geometry.x[:,0]), np.amax(self.mesh.geometry.x[:,0])
+                # ymin, ymax = np.amin(self.mesh.geometry.x[:,1]), np.amax(self.mesh.geometry.x[:,1])
                 #
                 # remove corners from base heat flow domain
                 # domain_c.x.array[  np.logical_and( self.mesh.geometry.x[:,0] < xmin+1, self.mesh.geometry.x[:,1] < ymin+1) ] = 0
@@ -1270,7 +1262,6 @@ class UniformNodeGridFixedSizeMeshModel:
             domain_zero = dolfinx.fem.Function(self.V)
             toppos = self.getSubsidenceAtMultiplePos(self.mesh.geometry.x[:,0], self.mesh.geometry.x[:,1])
             domain_zero.x.array[  self.mesh.geometry.x[:,2] < toppos+0.01 ] = 1
-            #logger.debug(f"Neumann conditions: , {self.tti}, {np.count_nonzero(domain_c.x.array)}, {np.count_nonzero(domain_zero.x.array)}")
 
             g = (-1.0*baseFlux) * ufl.conditional( domain_c > 0, 1.0, 0.0 )
             L = (self.c_rho*self.u_n + dt*f)*v*ufl.dx - dt * g * v * ufl.ds    # last term reflects Neumann BC 
@@ -1837,9 +1828,9 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
                 comm.Barrier()                    
 
             bar.next()
+    comm.Barrier()
     if comm.rank==0:
         logger.info(f"total time solve 3D: {time_solve}")
-    comm.Barrier()
     if comm.rank>=1:
         comm.send(mm2.mesh.topology.index_map(0).local_to_global(list(range(mm2.mesh.geometry.x.shape[0]))) , dest=0, tag=((comm.rank-1)*10)+21)
         comm.send(mm2.mesh_reindex, dest=0, tag=((comm.rank-1)*10)+23)

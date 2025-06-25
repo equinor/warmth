@@ -745,7 +745,7 @@ class Builder:
                 if all(node_sed) is False:
                     self.nodes[index[0]][index[1]] = False
                     dropped += 1
-                    logger.warning(f"dropping node {index}. One of the layer has no depth value")
+                    #logger.warning(f"dropping node {index}. One of the layer has no depth value")
                 else:
                     top = np.empty(0)
                     topage = np.empty(0)

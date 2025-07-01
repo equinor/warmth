@@ -13,27 +13,25 @@ permissions: {}
 jobs:
   deploy:
     runs-on: ubuntu-latest
-  permissions:
-    id-token: write
-    contents: write
-  steps:
-    - uses: actions/checkout@v2
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          curl -sSL https://install.python-poetry.org | python3
+          poetry install --with dev --no-interaction
+          
+      - name: Build
+        run: |
+          cd docs
+          sudo apt-get install pandoc
+          poetry run make html
 
-        
-    - name: Install dependencies
-      run: |
-        curl -sSL https://install.python-poetry.org | python3
-        poetry install --with dev --no-interaction
-        
-    - name: Build
-      run: |
-        cd docs
-        sudo apt-get install pandoc
-        poetry run make html
-
-    - name: Deploy
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs/_build/html
-        destination_dir: ./
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/_build/html
+          destination_dir: ./

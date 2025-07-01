@@ -909,8 +909,7 @@ class Builder:
                     yield col
 
     def node_flat(self) -> np.ndarray[single_node]:
-        arr = np.array(self.nodes)
-        arr = arr.flatten()
+        arr = np.array(self.nodes).flatten()
         return arr[arr!=False]
     
     @property

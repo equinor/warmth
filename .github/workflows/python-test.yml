@@ -14,7 +14,7 @@ on:
         type: string
   workflow_dispatch:
   push:
-    branches: [main, dev]
+    branches: [main, mesh]
     paths-ignore:
       - '.devcontainer/**'
       - '.github/**'

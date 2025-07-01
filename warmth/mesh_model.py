@@ -1,3 +1,4 @@
+import logging
 from typing import Tuple
 from pathlib import Path
 import numpy as np
@@ -28,10 +29,10 @@ def tic():
 def toc(msg=""):
     if 'startTime_for_tictoc' in globals():
         delta = time.time() - startTime_for_tictoc
-        logger.debug(msg+": Elapsed time is " + str(delta) + " seconds.")
+        logging.debug(msg+": Elapsed time is " + str(delta) + " seconds.")
         return delta
     else:
-        logger.debug("Toc: start time not set")
+        logging.debug("Toc: start time not set")
 
 @dataclass
 class rddms_upload_data_initial:
@@ -81,7 +82,7 @@ class UniformNodeGridFixedSizeMeshModel:
     def __init__(self, builder:Builder,parameters:Parameters, sedimentsOnly = False, padding_num_nodes=0):
         self._builder = builder
         self._parameters=parameters
-        self.node1D = [n for n in self._builder.iter_node()]
+        self.node1D = self._builder.node_flat() #[n for n in self._builder.iter_node()]
         self.num_nodes = len(self.node1D)
         self.mesh = None
 
@@ -701,19 +702,17 @@ class UniformNodeGridFixedSizeMeshModel:
     def buildMesh(self,tti:int):
         """Construct a new mesh at the given time index tti, and determine the vertex re-indexing induced by dolfinx
         """        
+        logging.info("Building 3D mesh")
         self.tti = tti
         self.buildVertices(time_index=tti)
-        logger.debug("Built vertices")
         self.constructMesh()
-        logger.debug("Built mesh")
-        self.updateMesh(tti)
-        logger.debug(f"Updated vertices for time {tti}")
-     
+        self.updateMesh(tti)     
 
     def updateMesh(self,tti:int, optimized=False):
         """Construct the mesh positions at the given time index tti, and update the existing mesh with the new values
         """   
         assert self.mesh is not None
+        logging.info(f"Updating 3D mesh for time {tti}")
         self.tti = tti        
         self.buildVertices(time_index=tti, optimized=optimized)
         self.updateVertices()        
@@ -1755,7 +1754,6 @@ sys.excepthook = global_except_hook
 def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0, pad_num_nodes=0,
             out_dir = "out-mapA/", sedimentsOnly=False, writeout=True, base_flux=None, 
             callback_fcn_initial=None, callback_fcn_timestep=None):
-    logger.setLevel(10)  # numeric level equals DEBUG
     comm = MPI.COMM_WORLD
     builder=interpolate_all_nodes(builder)
     nums = 4
@@ -1771,13 +1769,11 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
         for tti in range(start_time, end_time-1,-1): #start from oldest
             rebuild_mesh = (tti==start_time)
             if rebuild_mesh:
-                logger.debug(f"Rebuild/reload mesh at {tti}")          
                 mm2 = UniformNodeGridFixedSizeMeshModel(builder, parameters,sedimentsOnly, padding_num_nodes=pad_num_nodes)
                 mm2.buildMesh(tti)
                 if (base_flux is not None):
                     mm2.baseFluxMagnitude = base_flux
             else:
-                logger.debug(f"Re-generating mesh vertices at {tti}")
                 tic()
                 mm2.updateMesh(tti, optimized=True)
                 toc(msg="update mesh")

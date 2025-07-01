@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 import pickle
 from typing import Iterator, List, Literal
@@ -497,7 +498,7 @@ class Builder:
         self._ymax = 0
         self.boundary = None
         self.grid: Grid | None = None
-        self.nodes: list[single_node] = []
+        self.nodes: list[list[single_node]] = []
 
     @property
     def single_node_sediments_inputs_template(self):
@@ -901,10 +902,17 @@ class Builder:
         Iterator[single_node]
             1D node
         """
+        logging.info("Iterating 1D nodes")
         for row in self.nodes:
             for col in row:
                 if isinstance(col,bool)==False:
                     yield col
+
+    def node_flat(self) -> np.ndarray[single_node]:
+        arr = np.array(self.nodes)
+        arr = arr.flatten()
+        return arr[arr!=False]
+    
     @property
     def indexer_full_sim(self)->list:
         return [i.indexer for i in self.iter_node() if i._full_simulation is True]

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import logging
 from typing import List
 import itertools
 import numpy as np
@@ -117,7 +118,6 @@ def volumeOfTet(points):
 def volumeOfHex(points):
     """ Computes the volume of a hexahedron, given as eight 3D-points
     """ 
-    import numpy as np
     tetsplit1 = [ [1,2,4,8], [1,2,5,8], [4,8,2,3], [2,3,7,8], [2,5,6,8], [2,6,7,8] ]
     vol = 0.0
     for f in tetsplit1:
@@ -173,6 +173,7 @@ def interpolateNode(interpolationNodes: List[single_node], interpolationWeights=
 
 
 def interpolate_all_nodes(builder:Builder)->Builder:
+    logging.info("Interpolating 1D tectonic model results")
     for ni in range(len(builder.nodes)):
         for nj in range(len(builder.nodes[ni])):
             if (builder.nodes[ni][nj] is False) or (not builder.nodes[ni][nj]._full_simulation):

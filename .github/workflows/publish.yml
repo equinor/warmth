@@ -8,9 +8,7 @@ on:
     tags:
     - '*'
     
-permissions:
-  id-token: write
-  contents: write
+permissions: {}
 
 jobs:
   tests:
@@ -22,13 +20,14 @@ jobs:
     uses: equinor/warmth/.github/workflows/snyk.yml@main
     secrets:
       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      GITHUB_TOKEN_WORKFLOW: ${{ secrets.GITHUB_TOKEN }}
 
   deploy:
     needs: [tests, snyk]
     environment: deploy
     runs-on: ubuntu-latest
-
+    permissions:
+      id-token: write
+      contents: write
     steps:
       - uses: actions/checkout@v2
         with:

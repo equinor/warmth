@@ -4,8 +4,6 @@ on:
     secrets:
       SNYK_TOKEN:
         required: true
-      GITHUB_TOKEN_WORKFLOW:
-        required: true
 jobs:
   security:
     runs-on: ubuntu-latest

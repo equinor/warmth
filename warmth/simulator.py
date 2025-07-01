@@ -127,7 +127,7 @@ class Simulator:
                 from mpi4py.futures import MPIPoolExecutor
                 with MPIPoolExecutor(max_workers=10) as th:
                     futures = [th.submit(self.dump_input_nodes,  i)
-                            for i in self._builder.iter_node() if i is not False]
+                            for i in self._builder.iter_node()]
                     for future in concurrent.futures.as_completed(futures):
                         p.append([parameter_data_path, future.result()])
         else:
@@ -136,7 +136,7 @@ class Simulator:
                 self._builder.grid.dump(self._grid_path)
             with concurrent.futures.ThreadPoolExecutor(max_workers=10) as th:
                 futures = [th.submit(self.dump_input_nodes,  i)
-                        for i in self._builder.iter_node() if i is not False]
+                        for i in self._builder.iter_node()]
                 for future in concurrent.futures.as_completed(futures):
                     p.append([parameter_data_path, future.result()])
         return p

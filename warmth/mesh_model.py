@@ -1111,6 +1111,22 @@ class UniformNodeGridFixedSizeMeshModel:
         xdmf = dolfinx.io.XDMFFile(MPI.COMM_WORLD, outfilename, "w")
         xdmf.write_mesh(self.mesh)
         xdmf.write_function(self.u_n, tti)
+        np.save(outfilename.replace(".xdmf","")+f"rank{MPI.COMM_WORLD.rank}"+".npy", self.u_n.x.array[:].copy())
+        viewer = PETSc.Viewer().createMPIIO(outfilename+'.dat', 'w', MPI.COMM_WORLD)
+        self.u_n.vector.view(viewer)
+
+    def readTemperatureFunction(self, outfilename, tti=0):
+        """ 
+        """         
+        # xdmf = dolfinx.io.XDMFFile(MPI.COMM_WORLD, outfilename, "w")
+        # xdmf.write_mesh(self.mesh)
+        # xdmf.write_function(self.u_n, tti)
+        viewer = PETSc.Viewer().createMPIIO(outfilename+'.dat', 'r', MPI.COMM_WORLD)
+        self.u_n.vector.load(viewer)
+        self.u_n.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)        
+        # unx = np.load(outfilename+".npy")
+        # return unx
+
 
     def writeOutputFunctions(self, outfilename, tti=0):
         """ Writes the mesh, layer IDs, and current temperature solution to the given output file in XDMF format
@@ -1123,7 +1139,7 @@ class UniformNodeGridFixedSizeMeshModel:
         xdmf.write_function(self.layerIDsFcn, tti)
         xdmf.write_function(self.u_n, tti)
 
-    def setupSolver(self, initial_state_model = None):
+    def setupSolver(self, initial_state_model = None, initial_temp=None):
         self.resetMesh()
         self.Zmin = np.min(self.mesh_vertices, axis=0)[2]
         self.Zmax = np.max(self.mesh_vertices, axis=0)[2]
@@ -1182,13 +1198,17 @@ class UniformNodeGridFixedSizeMeshModel:
         st = time.time()
         # initialise both with initial condition: either a step function, or the solution from another Model instance
         if (initial_state_model is None):
-            self.u_n.interpolate(self.TemperatureGradient)
+            if initial_temp is None:
+                self.u_n.interpolate(self.TemperatureGradient)
+            else:
+                print("========= setting initial temp", initial_temp)
+                self.u_n.x.array[:] = initial_temp
         else:
             self.u_n.x.array[:] = initial_state_model.uh.x.array[:].copy()
         self.uh.x.array[:] = self.u_n.x.array[:].copy()
         logger.debug(f"setup delay 1.5: {time.time()-st}")
 
-    def setupSolverAndSolve(self, n_steps:int=100, time_step:int=-1, skip_setup:bool = False, initial_state_model = None, update_bc=False):
+    def setupSolverAndSolve(self, n_steps:int=100, time_step:int=-1, skip_setup:bool = False, initial_state_model = None, initial_temp=None, update_bc=False):
         """ Sets up the function spaces, output functions, input function (kappa values), boundary conditions, initial conditions.
             Sets up the heat equation in dolfinx, and solves the system in time for the given number of steps.
             
@@ -1196,7 +1216,7 @@ class UniformNodeGridFixedSizeMeshModel:
         """   
     
         if (not skip_setup):
-            self.setupSolver(initial_state_model)
+            self.setupSolver(initial_state_model, initial_temp=initial_temp)
 
         if (not skip_setup) or update_bc:
             self.bc = self.buildDirichletBC()
@@ -1753,12 +1773,13 @@ sys.excepthook = global_except_hook
 
 def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0, pad_num_nodes=0,
             out_dir = "out-mapA/", sedimentsOnly=False, writeout=True, base_flux=None, 
-            callback_fcn_initial=None, callback_fcn_timestep=None):
+            callback_fcn_initial=None, callback_fcn_timestep=None, continue_from=-1):
     comm = MPI.COMM_WORLD
     builder=interpolate_all_nodes(builder)
     nums = 4
     dt = parameters.myr2s / nums # time step is 1/4 of 1Ma
-    mms2 = []
+    # mms2 = []
+    mm2_count = 0
     mms_tti = []
     tti = 0
     # base_flux = 0.0033
@@ -1780,24 +1801,33 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
             mm2.useBaseFlux = (base_flux is not None)
             mm2.baseFluxMagnitude = base_flux
 
-            if ( len(mms2) == 0):
-                tic()
-                mm2.useBaseFlux = False
-                mm2.setupSolverAndSolve(n_steps=40, time_step = 314712e8 * 2e2, skip_setup=False)   
-                time_solve = time_solve + toc(msg="setup solver and solve")
+            if ( mm2_count == 0):
+                if (continue_from<0):
+                    tic()
+                    mm2.useBaseFlux = False
+                    mm2.setupSolverAndSolve(n_steps=40, time_step = 314712e8 * 2e2, skip_setup=False)   
+                    time_solve = time_solve + toc(msg="setup solver and solve")
+                else:
+                    tic()
+                    mm2.useBaseFlux = False
+                    mm2.setupSolverAndSolve(n_steps=40, time_step = 314712e8 * 2e2, skip_setup=False)  #  initial_temp=unx.copy()
+                    mm2.readTemperatureFunction(str(out_dir)+"Temperature-"+str(continue_from)+".xdmf", tti=continue_from)
+                    # mm2.u_n.x.array[:] = unx
+                    time_solve = time_solve + toc(msg="Use continue from: setup solver and load")
             else:    
                 mm2.useBaseFlux = (base_flux is not None)
                 tic()
-                mm2.setupSolverAndSolve( n_steps=nums, time_step=dt, skip_setup=(not rebuild_mesh), update_bc = mm2.useBaseFlux and (len(mms2) == 1))
+                mm2.setupSolverAndSolve( n_steps=nums, time_step=dt, skip_setup=(not rebuild_mesh), update_bc = mm2.useBaseFlux and (mm2_count == 1))
                 time_solve = time_solve + toc(msg="setup solver and solve")
             if (writeout):
                 tic()
-                mm2.writeLayerIDFunction(out_dir+"LayerID-"+str(tti)+".xdmf", tti=tti)
-                mm2.writeTemperatureFunction(out_dir+"Temperature-"+str(tti)+".xdmf", tti=tti)
+                # mm2.writeLayerIDFunction(str(out_dir)+"LayerID-"+str(tti)+".xdmf", tti=tti)
+                mm2.writeTemperatureFunction(str(out_dir)+"Temperature-"+str(tti)+".xdmf", tti=tti)
                 # mm2.writeOutputFunctions(out_dir+"test4-"+str(tti)+".xdmf", tti=tti)
                 toc(msg="write function")
             
-            mms2.append(mm2)
+            # mms2.append(mm2)
+            mm2_count = mm2_count + 1
             mms_tti.append(tti)
             if (upload_rddms):
                 tic()

@@ -5,10 +5,12 @@ import numpy as np
 from mpi4py import MPI
 import time
 import meshio
-import dolfinx  
+import dolfinx
+from dolfinx.fem import petsc  # load submodule
 from os import path
 from petsc4py import PETSc
 import ufl
+from basix.ufl import element
 import sys
 import time
 from dataclasses import dataclass
@@ -82,7 +84,7 @@ class UniformNodeGridFixedSizeMeshModel:
     def __init__(self, builder:Builder,parameters:Parameters, sedimentsOnly = False, padding_num_nodes=0):
         self._builder = builder
         self._parameters=parameters
-        self.node1D = self._builder.node_flat() #[n for n in self._builder.iter_node()]
+        self.node1D = [n for n in self._builder.iter_node()] # self._builder.node_flat()
         self.num_nodes = len(self.node1D)
         self.mesh = None
 
@@ -169,7 +171,7 @@ class UniformNodeGridFixedSizeMeshModel:
         def boundary(x):
             return np.full(x.shape[1], True)
         entities = dolfinx.mesh.locate_entities(self.mesh, 3, boundary )
-        tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh, 3, entities, False)
+        tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh._cpp_object, 3, entities, False)
         p0 = self.mesh.geometry.x[tet,:]
         tet_to_keep = []
         p_to_keep = set()
@@ -217,7 +219,7 @@ class UniformNodeGridFixedSizeMeshModel:
 
     def send_mpi_messages_per_timestep(self):
         comm = MPI.COMM_WORLD
-        comm.send(self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0]))) , dest=0, tag=((comm.rank-1)*10)+1021)
+        comm.send(self.mesh.topology.index_map(0).local_to_global( np.arange(self.mesh.geometry.x.shape[0])) , dest=0, tag=((comm.rank-1)*10)+1021)
         comm.send(self.mesh_reindex, dest=0, tag=((comm.rank-1)*10)+1023)
         comm.send(self.mesh_vertices_age, dest=0, tag=((comm.rank-1)*10)+1025)
         comm.send(self.mesh.geometry.x.copy(), dest=0, tag=( (comm.rank-1)*10)+1020)
@@ -229,7 +231,7 @@ class UniformNodeGridFixedSizeMeshModel:
         self.sub_posarr_s = [self.mesh.geometry.x.copy()]
         self.sub_Tarr_s = [self.uh.x.array[:].copy()]
 
-        self.index_map_s = [self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0])))]
+        self.index_map_s = [self.mesh.topology.index_map(0).local_to_global( np.arange(self.mesh.geometry.x.shape[0])) ]
         self.mesh_reindex_s = [self.mesh_reindex]
         self.mesh_vertices_age_s = [self.mesh_vertices_age]
 
@@ -269,7 +271,7 @@ class UniformNodeGridFixedSizeMeshModel:
         self.sub_posarr_s = [self.posarr]
         self.sub_Tarr_s = [self.Tarr]
 
-        self.index_map_s = [self.mesh.topology.index_map(0).local_to_global(list(range(self.mesh.geometry.x.shape[0])))]
+        self.index_map_s = [self.mesh.topology.index_map(0).local_to_global( np.arange(self.mesh.geometry.x.shape[0]))]
         self.mesh_reindex_s = [self.mesh_reindex]
         self.mesh_vertices_age_s = [self.mesh_vertices_age]
 
@@ -702,17 +704,17 @@ class UniformNodeGridFixedSizeMeshModel:
     def buildMesh(self,tti:int):
         """Construct a new mesh at the given time index tti, and determine the vertex re-indexing induced by dolfinx
         """        
-        logging.info("Building 3D mesh")
         self.tti = tti
         self.buildVertices(time_index=tti)
         self.constructMesh()
-        self.updateMesh(tti)     
+        self.updateMesh(tti)
+        logger.debug(f"Updated vertices for time {tti}")
+     
 
     def updateMesh(self,tti:int, optimized=False):
         """Construct the mesh positions at the given time index tti, and update the existing mesh with the new values
         """   
         assert self.mesh is not None
-        logging.info(f"Updating 3D mesh for time {tti}")
         self.tti = tti        
         self.buildVertices(time_index=tti, optimized=optimized)
         self.updateVertices()        
@@ -879,10 +881,12 @@ class UniformNodeGridFixedSizeMeshModel:
         """
         def boundary(x):
             return np.full(x.shape[1], True)
-        entities = dolfinx.mesh.locate_entities(self.mesh, 3, boundary )
-        tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh, 3, entities, False)
+        tdim = self.mesh.topology.dim  # 3 on a tetrahedral mesh
+        entities = dolfinx.mesh.locate_entities(self.mesh, tdim, boundary)
+        entities.flags.writeable = False
+        tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh._cpp_object, tdim, entities, False)
+
         self.layer_id_per_vertex = [ [] for _ in range(self.mesh.geometry.x.shape[0]) ]
-        ## 
 
         top_km = (np.min(self.mesh.geometry.x[tet,2], 1)-self.subsidence_at_nodes[:,self.tti]) * 1e-3
         bottom_km = (np.max(self.mesh.geometry.x[tet,2], 1)-self.subsidence_at_nodes[:,self.tti]) * 1e-3
@@ -913,7 +917,7 @@ class UniformNodeGridFixedSizeMeshModel:
         def boundary(x):
             return np.full(x.shape[1], True)
         entities = dolfinx.mesh.locate_entities(self.mesh, 3, boundary )
-        tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh, 3, entities, False)
+        tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh._cpp_object, 3, entities, False)
         self.layer_id_per_vertex = [ [] for _ in range(self.mesh.geometry.x.shape[0]) ]
         midp = []
         for i,t in enumerate(tet):
@@ -933,7 +937,7 @@ class UniformNodeGridFixedSizeMeshModel:
 
         self.mesh_vertex_layerIDs = np.full_like(self.mesh.geometry.x[:,2], 100, dtype=np.int32 )
         # piecewise constant Kappa in the tetrahedra
-        Q = dolfinx.fem.FunctionSpace(self.mesh, ("DG", 0))  # discontinuous Galerkin, degree zero
+        Q = dolfinx.fem.functionspace(self.mesh, ("DG", 0))  # discontinuous Galerkin, degree zero
         thermalCond = dolfinx.fem.Function(Q)
         c_rho = dolfinx.fem.Function(Q)
         self.c_rho0 = dolfinx.fem.Function(Q)
@@ -953,7 +957,7 @@ class UniformNodeGridFixedSizeMeshModel:
             return np.full(x.shape[1], True)
 
         entities = dolfinx.mesh.locate_entities(self.mesh, 3, boundary )
-        tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh, 3, entities, False)
+        tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh._cpp_object, 3, entities, False)
 
         p0 = self.mesh.geometry.x[tet,:]
         midp = np.sum(p0,1)*0.25   # midpoints of tetrahedra
@@ -1133,8 +1137,8 @@ class UniformNodeGridFixedSizeMeshModel:
 
         #
         # define function space
-        self.FE = ufl.FiniteElement("CG", self.mesh.ufl_cell(), self.CGorder)
-        self.V = dolfinx.fem.FunctionSpace(self.mesh, self.FE)
+        self.FE = element("CG", self.mesh.basix_cell(), self.CGorder)
+        self.V = dolfinx.fem.functionspace(self.mesh, self.FE)
 
         # Define solution variable uh
         self.uh = dolfinx.fem.Function(self.V)
@@ -1264,15 +1268,16 @@ class UniformNodeGridFixedSizeMeshModel:
 
             g = (-1.0*baseFlux) * ufl.conditional( domain_c > 0, 1.0, 0.0 )
             L = (self.c_rho*self.u_n + dt*f)*v*ufl.dx - dt * g * v * ufl.ds    # last term reflects Neumann BC 
+
         else:
             L = (self.c_rho*self.u_n + dt*f)*v*ufl.dx   # no Neumann BC 
 
         bilinear_form = dolfinx.fem.form(a)
         linear_form = dolfinx.fem.form(L)
 
-        A = dolfinx.fem.petsc.assemble_matrix(bilinear_form, bcs=[self.bc])
+        A = petsc.assemble_matrix(bilinear_form, bcs=[self.bc])
         A.assemble()
-        b = dolfinx.fem.petsc.create_vector(linear_form)
+        b = petsc.assemble_vector(linear_form)
 
         comm = MPI.COMM_WORLD
         solver = PETSc.KSP().create(self.mesh.comm)
@@ -1286,20 +1291,18 @@ class UniformNodeGridFixedSizeMeshModel:
             # Update the right hand side reusing the initial vector
             with b.localForm() as loc_b:
                 loc_b.set(0)
-            dolfinx.fem.petsc.assemble_vector(b, linear_form)
+            petsc.assemble_vector(b, linear_form)
 
             # TODO: update Dirichlet BC at every time step:
             #       the temperature at the base of Asth is set such that it reaches Tm at the current depth of the LAB (using the slope adiab=0.0003)
             # bc = self.buildDirichletBC()
 
             # Apply Dirichlet boundary condition to the vector
-            dolfinx.fem.petsc.apply_lifting(b, [bilinear_form], [[self.bc]])
+            petsc.apply_lifting(b, [bilinear_form], [[self.bc]])
             b.ghostUpdate(addv=PETSc.InsertMode.ADD_VALUES, mode=PETSc.ScatterMode.REVERSE)
-
-            dolfinx.fem.petsc.set_bc(b, [self.bc])
-
+            petsc.set_bc(b, [self.bc])
             # Solve linear problem
-            solver.solve(b, self.uh.vector)
+            solver.solve(b, self.uh.x.petsc_vec)
             self.uh.x.scatter_forward()
 
             # Update solution at previous time step (u_n)
@@ -1570,7 +1573,7 @@ class UniformNodeGridFixedSizeMeshModel:
             return np.full(x.shape[1], True)
 
         entities = dolfinx.mesh.locate_entities(self.mesh, 3, boundary )
-        tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh, 3, entities, False)
+        tet = dolfinx.cpp.mesh.entities_to_geometry(self.mesh._cpp_object, 3, entities, False)
 
         p0 = self.mesh.geometry.x[tet,:]
         totalvol = 0
@@ -1828,7 +1831,7 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
     if comm.rank==0:
         logger.info(f"total time solve 3D: {time_solve}")
     if comm.rank>=1:
-        comm.send(mm2.mesh.topology.index_map(0).local_to_global(list(range(mm2.mesh.geometry.x.shape[0]))) , dest=0, tag=((comm.rank-1)*10)+21)
+        comm.send(mm2.mesh.topology.index_map(0).local_to_global(np.arange(mm2.mesh.geometry.x.shape[0])) , dest=0, tag=((comm.rank-1)*10)+21)
         comm.send(mm2.mesh_reindex, dest=0, tag=((comm.rank-1)*10)+23)
         comm.send(mm2.mesh_vertices_age, dest=0, tag=((comm.rank-1)*10)+25)
         comm.send(mm2.posarr, dest=0, tag=((comm.rank-1)*10)+20)

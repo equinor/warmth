@@ -6,7 +6,7 @@ authors = ["Adam Cheng <52572642+adamchengtkc@users.noreply.github.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.13"
+python = ">=3.10,<3.13"
 xtgeo = "^3.4.0"
 numpy = "^1.26.0"
 scipy = "^1.11.3"

@@ -1,4 +1,4 @@
-FROM dolfinx/dolfinx:v0.6.0
+FROM dolfinx/dolfinx:v0.10.0
 
 LABEL org.opencontainers.image.source https://github.com/equinor/warmth
 WORKDIR /home/warmth

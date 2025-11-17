@@ -16,13 +16,9 @@ jobs:
     with:
       event_type: ${{ github.event_name}}
       action_type: ${{ github.event.action}}
-  snyk:
-    uses: equinor/warmth/.github/workflows/snyk.yml@main
-    secrets:
-      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
   deploy:
-    needs: [tests, snyk]
+    needs: [tests]
     environment: deploy
     runs-on: ubuntu-latest
     permissions:

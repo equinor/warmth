@@ -10,7 +10,6 @@ import resqpy.unstructured as rug
 import resqpy.time_series as rts
 from warmth.logging import logger
 #
-# 
 #
 
 def read_mesh_resqml(epcfilename, meshTitle = 'tetramesh'):
@@ -239,7 +238,6 @@ def read_mesh_resqml_hexa(epcfilename, meshTitle = 'hexamesh'):
     """
     model = rq.Model(epcfilename)
     assert model is not None
-
     #
     # read mesh:  vertex positions and cell definitions
     #
@@ -248,9 +246,7 @@ def read_mesh_resqml_hexa(epcfilename, meshTitle = 'hexamesh'):
     hexa = rug.HexaGrid(model, uuid = hexa_uuid)
     assert hexa is not None
     assert hexa.cell_shape == 'hexahedral'
-    
     cells = np.array( [ hexa.distinct_node_indices_for_cell(i) for i in range(hexa.cell_count) ]  ) # cell indices are read using this function(?)
-    
     hexa.check_hexahedral()
 
     #
@@ -270,14 +266,12 @@ def read_mesh_resqml_hexa(epcfilename, meshTitle = 'hexamesh'):
     # assert layerID_prop.uom() == 'Euc'
     assert layerID_prop.is_continuous() == False
     assert layerID_prop.indexable_element() == 'cells'
- 
     titles=[ 'Age', 'LayerID', 'Porosity_initial', 'Porosity_decay', 'Density_solid', 'thermal_conductivity', 'Radiogenic_heat_production']
     titles_uuid = [model.uuid(title = title) for title in titles]
     titles_uuid.append(temp_uuid)
-    
     for prop_uuid in titles_uuid:
         prop = rqp.Property(model, uuid = prop_uuid)
-    
+
 
 def write_hexa_grid_with_properties(filename, nodes, cells, modelTitle = "hexamesh",
     Temp_per_vertex=None, age_per_vertex=None, poro0_per_cell=None, decay_per_cell=None, density_per_cell=None,

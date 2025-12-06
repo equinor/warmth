@@ -13,6 +13,7 @@ import ufl
 from basix.ufl import element
 import sys
 import time
+import gc
 from dataclasses import dataclass
 from typing import List
 from scipy.interpolate import LinearNDInterpolator
@@ -590,7 +591,7 @@ class UniformNodeGridFixedSizeMeshModel:
         tti = time_index
         self.tti = time_index
         compare = False
-        if (optimized) and hasattr(self, 'mesh_vertices'):            
+        if (optimized) and hasattr(self, 'mesh_vertices'):
             compare = True
             xxT = self.top_sed_at_nodes[:,tti]
             bc = self.base_crust_at_nodes[:,tti]
@@ -717,7 +718,7 @@ class UniformNodeGridFixedSizeMeshModel:
         assert self.mesh is not None
         self.tti = tti        
         self.buildVertices(time_index=tti, optimized=optimized)
-        self.updateVertices()        
+        self.updateVertices()
         self.posarr.append(self.mesh.geometry.x.copy())
         self.time_indices.append(self.tti)
 
@@ -1310,6 +1311,15 @@ class UniformNodeGridFixedSizeMeshModel:
             self.u_n.x.array[:] = self.uh.x.array
             # comm.Barrier()
         self.Tarr.append(self.uh.x.array[:].copy())
+        A.destroy()
+        solver.destroy()
+        del A
+        del b
+        del solver
+        del L
+        del linear_form
+        del bilinear_form
+        gc.collect()
         # print("latest Tarr", self.Tarr[-1], np.mean(self.Tarr[-1]))
 
     def rddms_upload_initial(self, tti):
@@ -1783,15 +1793,15 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
             mm2.useBaseFlux = (base_flux is not None)
             mm2.baseFluxMagnitude = base_flux
 
-            if ( len(mms2) == 0):
+            if ( len(mms_tti) == 0):
                 tic()
                 mm2.useBaseFlux = False
-                mm2.setupSolverAndSolve(n_steps=40, time_step = 314712e8 * 2e2, skip_setup=False)   
+                mm2.setupSolverAndSolve(n_steps=40, time_step = 314712e8 * 2e2, skip_setup=False)
                 time_solve = time_solve + toc(msg="setup solver and solve")
-            else:    
+            else:
                 mm2.useBaseFlux = (base_flux is not None)
                 tic()
-                mm2.setupSolverAndSolve( n_steps=nums, time_step=dt, skip_setup=(not rebuild_mesh), update_bc = mm2.useBaseFlux and (len(mms2) == 1))
+                mm2.setupSolverAndSolve( n_steps=nums, time_step=dt, skip_setup=(not rebuild_mesh), update_bc = mm2.useBaseFlux and (len(mms_tti) == 1))
                 time_solve = time_solve + toc(msg="setup solver and solve")
             if (writeout):
                 tic()
@@ -1799,7 +1809,7 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
                 mm2.writeTemperatureFunction(out_dir+"Temperature-"+str(tti)+".xdmf", tti=tti)
                 # mm2.writeOutputFunctions(out_dir+"test4-"+str(tti)+".xdmf", tti=tti)
                 toc(msg="write function")
-            
+
             mms2.append(mm2)
             mms_tti.append(tti)
             if (upload_rddms):
@@ -1809,7 +1819,7 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
                     mm2.send_mpi_messages_per_timestep()
                 if comm.rank==0:
                     mm2.receive_mpi_messages_per_timestep()
-                comm.Barrier()                    
+                comm.Barrier()
                 toc(msg="Sync result across MPI nodes")
                 if (tti==start_time):
                     # initial upload
@@ -1819,7 +1829,7 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
                             callback_fcn_initial(data, topo)
                     else:
                         pass
-                comm.Barrier()  
+                comm.Barrier()
                 if comm.rank==0:
                     data = mm2.rddms_upload_timestep(tti, is_final=(tti==end_time))
                     if (callback_fcn_timestep is not None):

@@ -55,7 +55,7 @@ class rddms_hexamesh_topology:
     nodes_per_face_cl: np.ndarray[np.int32]
     faces_per_cell: np.ndarray[np.int32]
     faces_per_cell_cl: np.ndarray[np.int32]
-    cell_face_is_right_handed: np.ndarray[np.bool8]
+    cell_face_is_right_handed: np.ndarray[np.bool]
 
 @dataclass
 class rddms_upload_data_timestep:

@@ -1,4 +1,4 @@
-from xtgeo.surface import RegularSurface
+import xtgeo
 import numpy as np
 
 # %matplotlib
@@ -33,10 +33,10 @@ def getArrayN(T,p, subind):
 # Temperature
 #
 ms = []
-ms.append(RegularSurface('results-hypothetical\\layercake_all_sand\\Top of model - Temperature - 0 Ma.gri'))
-ms.append(RegularSurface('results-hypothetical\\layercake_all_sand\\30Ma - Temperature - 0 Ma.gri'))
-# ms.append(RegularSurface('results-hypothetical\\layercake_all_sand\\Top of 50MA - Temperature - 0 Ma.gri'))
-ms.append(RegularSurface('results-hypothetical\\layercake_all_sand\\Base of model - Temperature - 0 Ma.gri'))
+ms.append(xtgeo.surface_from_file('results-hypothetical\\layercake_all_sand\\Top of model - Temperature - 0 Ma.gri'))
+ms.append(xtgeo.surface_from_file('results-hypothetical\\layercake_all_sand\\30Ma - Temperature - 0 Ma.gri'))
+# ms.append(xtgeo.surface_from_file('results-hypothetical\\layercake_all_sand\\Top of 50MA - Temperature - 0 Ma.gri'))
+ms.append(xtgeo.surface_from_file('results-hypothetical\\layercake_all_sand\\Base of model - Temperature - 0 Ma.gri'))
 
 T0 = np.load('out-hypothetical/T-value-0.npy')
 p0 = np.load('out-hypothetical/mesh-pos-0.npy')
@@ -72,10 +72,10 @@ plt.pyplot.show()
 # Conductivity
 #
 ms = []
-ms.append(RegularSurface('results-hypothetical\\layercake_all_sand_isotropic\\Top of model- Vertical Thermal Conductivity - 0 Ma.gri'))
-ms.append(RegularSurface('results-hypothetical\\layercake_all_sand_isotropic\\Top of 30 - Vertical Thermal Conductivity - 0 Ma.gri'))
-# ms.append(RegularSurface('results-hypothetical\\layercake_all_sand_isotropic\\Top of 50MA - Temperature - 0 Ma.gri'))
-ms.append(RegularSurface('results-hypothetical\\layercake_all_sand_isotropic\\Base of mode - Vertical Thermal Conductivity - 0 Ma.gri'))
+ms.append(xtgeo.surface_from_file('results-hypothetical\\layercake_all_sand_isotropic\\Top of model- Vertical Thermal Conductivity - 0 Ma.gri'))
+ms.append(xtgeo.surface_from_file('results-hypothetical\\layercake_all_sand_isotropic\\Top of 30 - Vertical Thermal Conductivity - 0 Ma.gri'))
+# ms.append(xtgeo.surface_from_file('results-hypothetical\\layercake_all_sand_isotropic\\Top of 50MA - Temperature - 0 Ma.gri'))
+ms.append(xtgeo.surface_from_file('results-hypothetical\\layercake_all_sand_isotropic\\Base of mode - Vertical Thermal Conductivity - 0 Ma.gri'))
 
 
 C0 = np.load('out-hypothetical/k-value-0.npy')

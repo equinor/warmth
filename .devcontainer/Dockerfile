@@ -1,6 +1,6 @@
-FROM dolfinx/dolfinx:v0.6.0
+FROM dolfinx/dolfinx:v0.10.0
 
-RUN DEBIAN_FRONTEND=noninteractive TZ=Europe/Oslo \
+RUN DEBIAN_FRONTEND=noninteractive \
     && apt-get update \ 
     && apt-get install -y curl
 

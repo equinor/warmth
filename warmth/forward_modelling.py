@@ -1458,9 +1458,11 @@ class Forward_model:
                         base_sed = xsed_with_seabed[-1]
                         idx_base_sed = np.abs(depth_out - base_sed).argmin()
                         depth_out_mid_point = (depth_out[1:] + depth_out[:-1]) / 2
-
-                        idsed_out[idx_seabed:idx_base_sed, i] = np.interp(
-                            depth_out_mid_point[idx_seabed:idx_base_sed], xsed_with_seabed[:-1], idsed)
+                        f = interpolate.interp1d(xsed_with_seabed[:-1], idsed, kind='nearest', fill_value='extrapolate')
+                        v = f(depth_out_mid_point[idx_seabed:idx_base_sed])
+                        idsed_out[idx_seabed:idx_base_sed, i] = v
+                        #idsed_out[idx_seabed:idx_base_sed, i] = np.interp(
+                        #    depth_out_mid_point[idx_seabed:idx_base_sed], xsed_with_seabed[:-1], idsed)
                         idsed_out[idx_base_sed:idx_base_crust,
                                  i] = -1
                     else:

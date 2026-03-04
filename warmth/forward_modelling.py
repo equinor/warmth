@@ -914,7 +914,6 @@ class Forward_model:
         return
     
     def get_sediments(self, time:int, Tsed_old: np.ndarray):
-        #xsed = np.append(self.current_node.sed[:,:,time][:,0], self.current_node.sed[:,:,time][-1,-1])
         idsed = np.argwhere(self.current_node.sed[:,:,time][:,-1] >0).flatten()
         HPsed = self.current_node.sediments["rhp"].values[idsed]
         seabed_idx = np.argwhere(self.current_node.sed[:,:,time][:,0] == 0).flatten()[-1]
@@ -924,14 +923,14 @@ class Forward_model:
             xsed = np.append(self.current_node.sed[:,:,time][seabed_idx:,0], self.current_node.sed[:,:,time][-1,-1])
         # remove hiatus layer
         idsed = np.argwhere(self.current_node.sed[:,:,time][:,-1] >0).flatten()
-        
         # layers with no thickness
         hiatus_layers = np.argwhere((self.current_node.sed[:,:,time][:,1]-self.current_node.sed[:,:,time][:,0]==0) & (self.current_node.sed[:,:,time][:,1]!=0)).flatten()
         if hiatus_layers.size > 0:
             xsed = np.unique(xsed)
             indx = np.ravel([np.where(idsed == i) for i in hiatus_layers])
             idsed = np.delete(idsed, indx)
-        #####
+            indx = indx[indx < Tsed_old.size]
+            Tsed_old = np.delete(Tsed_old, indx)
         HPsed = self.current_node.sediments["rhp"].values[idsed]
         if Tsed_old.size < xsed.size: # new layer added
             Tsed = np.append(np.zeros(xsed.size-Tsed_old.size), Tsed_old)
@@ -945,7 +944,7 @@ class Forward_model:
         assert xsed.size -1 == HPsed.size
         assert HPsed.size == idsed.size
         return sedflag, xsed, Tsed, HPsed, idsed
-    
+
     def compaction(self,top_m: float, base_m: float, phi0: float, phi_decay: float,  sed_id:int, base_maximum_burial_depth_m: float = 0) -> float:
         """Compact sediment at depth
 

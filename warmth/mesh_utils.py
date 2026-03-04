@@ -178,7 +178,11 @@ def interpolate_all_nodes(builder:Builder)->Builder:
         for nj in range(len(builder.nodes[ni])):
             if (builder.nodes[ni][nj] is False) or (not builder.nodes[ni][nj]._full_simulation):
                 closest_x_up = []
-                for j in range(ni,len(builder.nodes[nj])):
+                if nj>=len(builder.nodes):
+                    inj= len(builder.nodes)-1
+                else:
+                    inj = nj
+                for j in range(ni,len(builder.nodes[inj])):
                     matching_x = [ i[0] for i in builder.indexer_full_sim if i[0]==j ]
                     closest_x_up = closest_x_up + list(set(matching_x))
                     if len(matching_x)>0:

@@ -129,7 +129,7 @@ class single_node:
             self.salt_thickness[idx][valid_vals[0]:valid_vals[-1]+1] = np.interp(new_data_idx,valid_vals,salt_thickness_has_val)
             # no salt movement before sedimentation of salt compeletes. set to nan
             salt_end_deposition_age = self.sediments.iloc[self.salt_layer_id[idx]]["topage"]
-            self.salt_thickness[idx][salt_end_deposition_age+1:]=np.nan
+            self.salt_thickness[idx][int(salt_end_deposition_age+1):]=np.nan
         return
 
     @property
@@ -950,3 +950,4 @@ class Builder:
         else:
             logger.warning("Invalid sealevel data. Expect dict")
         return
+

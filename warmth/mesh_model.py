@@ -12,7 +12,6 @@ from petsc4py import PETSc
 import ufl
 from basix.ufl import element
 import sys
-import time
 import gc
 from dataclasses import dataclass
 from typing import List
@@ -1783,7 +1782,9 @@ def run_3d( builder:Builder, parameters:Parameters,  start_time=182, end_time=0,
             rebuild_mesh = (tti==start_time)
             if rebuild_mesh:
                 mm2 = UniformNodeGridFixedSizeMeshModel(builder, parameters,sedimentsOnly, padding_num_nodes=pad_num_nodes)
+                st = time.time()
                 mm2.buildMesh(tti)
+                logger.info(f"Build mesh took {(time.time()-st)/60} minutes")
                 if (base_flux is not None):
                     mm2.baseFluxMagnitude = base_flux
             else:

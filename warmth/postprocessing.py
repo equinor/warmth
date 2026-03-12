@@ -378,11 +378,11 @@ class Results:
             t =np.flip(cell[~np.isnan(cell)])
             if Rotype == "Easy%RoDL":
                 vr = VR.easyRoDL(t)
-                vr = np.flip(vr)
             elif Rotype == "Easy%RoV":
                 vr = VR.easyRoV(t, np.ones(t.size))
             else:
                 raise Exception(f"{Rotype} not implemented")
+            vr = np.flip(vr)
             temp_h[i, :vr.size] = vr.flatten()
         return temp_h
 

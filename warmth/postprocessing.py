@@ -379,7 +379,7 @@ class Results:
             if Rotype == "Easy%RoDL":
                 vr = VR.easyRoDL(t)
             elif Rotype == "Easy%RoV":
-                vr = VR.easyRoV(t, np.ones(t.size))
+                vr = VR.easyRoV(t+ 273.15, np.ones(t.size))
             else:
                 raise Exception(f"{Rotype} not implemented")
             vr = np.flip(vr)
@@ -473,7 +473,7 @@ class VR:
         Vitrinite reflectance np.ndarray[np.float64]
             Vitrinite reflectance based on Easy%RoDL
         """
-        temp_k = temperature+273
+        temp_k = temperature+273.15
         time = np.arange(np.count_nonzero(~np.isnan(temp_k)))
         A_V = 2e15
         E_easy_V = np.array(

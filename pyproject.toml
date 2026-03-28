@@ -11,7 +11,7 @@ xtgeo = ">=4.0.0"
 numpy = "^1.26.0"
 scipy = "^1.11.3"
 progress = "^1.6"
-urllib3 = "^2.0.6"
+urllib3 = "^2.6.3"
 meshio = {extras = ["all"], version = "^5.3.4"}
 pillow = "^10.3.0"
 pandas = "^2.3.0"
